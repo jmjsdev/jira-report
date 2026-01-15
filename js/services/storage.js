@@ -15,7 +15,9 @@ import {
   generateFilename,
   readFileAsText,
   saveFileHandle,
-  tryLoadLastFile
+  tryLoadLastFile,
+  saveBackupToIndexedDB,
+  getBackupFromIndexedDB
 } from '../utils/file.js';
 import { parseJiraXml, mergeTickets } from '../parsers/jira-xml.js';
 
@@ -69,13 +71,22 @@ class StorageService {
 
     // Programmer une nouvelle sauvegarde
     this._liveSaveTimeout = setTimeout(async () => {
-      if (State.hasUnsavedChanges && State.currentFileHandle) {
+      if (State.hasUnsavedChanges) {
         try {
           const data = State.toJSON();
-          await saveToHandle(State.currentFileHandle, data);
+
+          // Sauvegarder dans le fichier si handle disponible
+          if (State.currentFileHandle) {
+            await saveToHandle(State.currentFileHandle, data);
+            console.log('Live save fichier effectué');
+          }
+
+          // Toujours sauvegarder en backup dans IndexedDB
+          await saveBackupToIndexedDB(data);
+          console.log('Live save IndexedDB effectué');
+
           State.setUnsavedChanges(false);
           this._lastSaveTime = new Date();
-          console.log('Live save effectué');
         } catch (err) {
           console.warn('Erreur live save:', err);
         }
@@ -168,41 +179,46 @@ class StorageService {
   }
 
   /**
-   * Tente de recharger le dernier fichier ouvert
-   * Note: Cette fonctionnalité peut être bloquée dans les environnements d'entreprise
+   * Tente de recharger le dernier fichier ouvert ou le backup IndexedDB
    * @returns {Promise<object>} Résultat du chargement
    */
   async tryLoadLastProject() {
+    // D'abord essayer de recharger le fichier
     try {
       const result = await tryLoadLastFile();
 
-      if (!result.success) {
-        return { success: false };
+      if (result.success && result.content && result.content.tasks) {
+        State.fromJSON(result.content);
+        if (result.handle) {
+          State.setCurrentFileHandle(result.handle);
+        }
+        return {
+          success: true,
+          message: `Fichier rechargé: ${result.filename || 'projet.json'}`,
+          taskCount: result.content.tasks.length
+        };
       }
-
-      // Valider le contenu
-      if (!result.content || !result.content.tasks) {
-        return { success: false, message: 'Format de fichier invalide' };
-      }
-
-      // Charger les données dans l'état
-      State.fromJSON(result.content);
-
-      // Stocker le handle
-      if (result.handle) {
-        State.setCurrentFileHandle(result.handle);
-      }
-
-      return {
-        success: true,
-        message: `Fichier rechargé: ${result.filename || 'projet.json'}`,
-        taskCount: result.content.tasks.length
-      };
     } catch (err) {
-      // Échec silencieux - peut arriver dans les environnements d'entreprise
-      console.warn('Erreur lors du rechargement automatique (probablement bloqué par politique):', err);
-      return { success: false };
+      console.warn('Erreur rechargement fichier:', err);
     }
+
+    // Sinon essayer le backup IndexedDB
+    try {
+      const backup = await getBackupFromIndexedDB();
+      if (backup && backup.data && backup.data.tasks) {
+        State.fromJSON(backup.data);
+        return {
+          success: true,
+          message: `Backup restauré (${backup.savedAt})`,
+          taskCount: backup.data.tasks.length,
+          fromBackup: true
+        };
+      }
+    } catch (err) {
+      console.warn('Erreur rechargement backup:', err);
+    }
+
+    return { success: false };
   }
 
   /**
@@ -309,11 +325,18 @@ class StorageService {
    */
   async save() {
     const handle = State.currentFileHandle;
+    const data = State.toJSON();
+
+    // Toujours sauvegarder en backup IndexedDB
+    try {
+      await saveBackupToIndexedDB(data);
+    } catch (err) {
+      console.warn('Erreur backup IndexedDB:', err);
+    }
 
     if (handle && isFileSystemAccessSupported()) {
       // Sauvegarder dans le fichier existant
       try {
-        const data = State.toJSON();
         await saveToHandle(handle, data);
         State.setUnsavedChanges(false);
         this._lastSaveTime = new Date();
@@ -323,13 +346,10 @@ class StorageService {
           message: 'Fichier sauvegardé'
         };
       } catch (err) {
-        // Permission refusée ou autre erreur
         console.error('Erreur de sauvegarde:', err);
-        // Fallback vers Save As
         return this.saveAs();
       }
     } else {
-      // Pas de handle, faire un Save As
       return this.saveAs();
     }
   }
