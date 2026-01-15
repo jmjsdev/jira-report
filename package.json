@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "Application de suivi de tickets JIRA - Pure HTML/JS",
   "scripts": {
-    "build": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020",
-    "watch": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020 --watch"
+    "build": "npm run build:js && npm run build:css",
+    "build:js": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020",
+    "build:css": "esbuild styles/index.css --bundle --outfile=styles/app.bundle.css",
+    "watch": "npm run watch:js & npm run watch:css",
+    "watch:js": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020 --watch",
+    "watch:css": "esbuild styles/index.css --bundle --outfile=styles/app.bundle.css --watch"
   },
   "keywords": ["jira", "report", "html", "javascript"],
   "license": "MIT",
