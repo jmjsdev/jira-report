@@ -42,6 +42,31 @@ cp -r vendors "${BUILD_DIR}/"
 mkdir -p "${BUILD_DIR}/js"
 cp js/app.bundle.js "${BUILD_DIR}/js/"
 
+echo "2.1 Injection de la version..."
+
+# Date de build
+BUILD_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Ajouter la version au bundle JS
+sed -i '' "1i\\
+/* Jira Report ${VERSION} - Build: ${BUILD_DATE} */
+" "${BUILD_DIR}/js/app.bundle.js"
+
+# Ajouter la version aux fichiers CSS
+for css_file in "${BUILD_DIR}/styles/"*.css; do
+  sed -i '' "1i\\
+/* Jira Report ${VERSION} - Build: ${BUILD_DATE} */
+" "$css_file"
+done
+
+# Ajouter la version dans le HTML (meta tag + commentaire)
+sed -i '' "s|<head>|<head>\\
+  <meta name=\"version\" content=\"${VERSION}\">\\
+  <!-- Jira Report ${VERSION} - Build: ${BUILD_DATE} -->|" "${BUILD_DIR}/index.html"
+
+# Ajouter la version visible dans le footer
+sed -i '' "s|Jira Report - Application HTML/JS pure|Jira Report ${VERSION}|" "${BUILD_DIR}/index.html"
+
 echo "3. Création de l'archive..."
 
 # Créer le zip
