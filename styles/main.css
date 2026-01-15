@@ -196,31 +196,138 @@ h1 {
 }
 
 /* ============================================
-   Statistiques
+   Barre d'outils (stats + actions)
    ============================================ */
-.stats {
+.stats-bar {
   display: flex;
-  gap: 24px;
-  margin-bottom: 24px;
-  padding: 16px;
-  background: var(--color-bg-alt);
-  border-radius: var(--radius-lg);
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-gray-200);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
 }
 
-.stat-item {
+/* Groupes style ruban */
+.ribbon-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ribbon-group-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.ribbon-group-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--color-gray-500);
+  letter-spacing: 0.5px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--color-gray-300);
+  width: 100%;
   text-align: center;
 }
 
-.stat-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--color-primary);
+.stats-info {
+  font-size: 13px;
+  color: var(--color-gray-700);
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
 }
 
-.stat-label {
-  font-size: 12px;
-  color: var(--color-text-light);
-  text-transform: uppercase;
+.stats-info strong {
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.stats-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--color-gray-400);
+  margin: 0 4px;
+}
+
+.stats-spacer {
+  flex: 1;
+}
+
+.stats-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 10px;
+  height: fit-content;
+  background: var(--color-bg);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 50px;
+}
+
+.stats-btn .btn-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.stats-btn .btn-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-gray-600);
+}
+
+.stats-btn:hover {
+  background: var(--color-gray-100);
+  border-color: var(--color-gray-400);
+}
+
+.stats-btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.stats-btn-primary .btn-label {
+  color: white;
+}
+
+.stats-btn-primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.stats-btn-toggle.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.stats-btn-toggle.active .btn-label {
+  color: white;
+}
+
+.stats-btn-danger {
+  border-color: var(--color-error);
+}
+
+.stats-btn-danger .btn-label {
+  color: var(--color-error);
+}
+
+.stats-btn-danger:hover {
+  background: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.stats-btn-danger:hover .btn-label {
+  color: white;
 }
 
 /* ============================================
@@ -319,4 +426,25 @@ h1 {
 
 .notification-info {
   background: var(--color-info);
+}
+
+/* ============================================
+   Drag & Drop Global
+   ============================================ */
+body.drag-over::after {
+  content: '📄 Déposez le fichier ici';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(111, 66, 193, 0.9);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  z-index: 9999;
+  pointer-events: none;
 }

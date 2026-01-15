@@ -174,9 +174,14 @@ function parseItem(item) {
  * @returns {object} Information de statut
  */
 function getStatusInfo(jiraStatus, labels) {
-  // D'abord vérifier le statut JIRA
-  if (jiraStatus && Config.statusMap[jiraStatus]) {
-    return Config.statusMap[jiraStatus];
+  // D'abord vérifier le statut JIRA (case-insensitive)
+  if (jiraStatus) {
+    const statusKey = Object.keys(Config.statusMap).find(
+      k => k.toLowerCase() === jiraStatus.toLowerCase()
+    );
+    if (statusKey) {
+      return Config.statusMap[statusKey];
+    }
   }
 
   // Ensuite vérifier les labels pour des indications de statut
@@ -190,6 +195,29 @@ function getStatusInfo(jiraStatus, labels) {
         }
       }
     }
+  }
+
+  // Détection par mots-clés dans le statut JIRA (sauf "terminé" qui ne doit pas être auto-done)
+  if (jiraStatus) {
+    const statusLower = jiraStatus.toLowerCase();
+    // Seulement "Done", "Closed", "Resolved" sont auto-done, PAS "terminé"
+    if (statusLower === 'done' || statusLower === 'closed' || statusLower === 'resolved') {
+      return { key: 'done', label: jiraStatus, icon: '✓', cssClass: 'status-done' };
+    }
+    if (statusLower.includes('progress') || statusLower.includes('cours') || statusLower.includes('développ') || statusLower.includes('terminé')) {
+      return { key: 'inprogress', label: jiraStatus, icon: '⏳', cssClass: 'status-inprogress' };
+    }
+    if (statusLower.includes('review') || statusLower.includes('revue')) {
+      return { key: 'review', label: jiraStatus, icon: '👀', cssClass: 'status-review' };
+    }
+    if (statusLower.includes('livr') || statusLower.includes('deliver')) {
+      return { key: 'delivered', label: jiraStatus, icon: '📦', cssClass: 'status-delivered' };
+    }
+    if (statusLower.includes('prêt') || statusLower.includes('ready') || statusLower.includes('test')) {
+      return { key: 'ready', label: jiraStatus, icon: '🚀', cssClass: 'status-ready' };
+    }
+    // Statut non reconnu - utiliser le label original avec style backlog
+    return { key: 'backlog', label: jiraStatus, icon: '📋', cssClass: 'status-backlog' };
   }
 
   // Statut par défaut

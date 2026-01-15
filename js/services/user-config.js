@@ -1,26 +1,55 @@
 /**
  * Service de configuration utilisateur
- * Stocké en localStorage pour persistance
+ * Stocké dans le fichier projet JSON (pas localStorage)
  */
 
-const STORAGE_KEY = 'jira-report-config';
+// Singleton pour accès global - sera connecté au State
+let _stateRef = null;
 
 class UserConfigService {
   constructor() {
-    this._config = {
-      // Tags personnalisés (affichés dans les filtres même si pas dans les tickets)
+    this._listeners = new Set();
+  }
+
+  /**
+   * Connecte le service au State (appelé par State)
+   */
+  connectToState(state) {
+    _stateRef = state;
+  }
+
+  /**
+   * Retourne la config depuis le State
+   */
+  _getConfig() {
+    if (!_stateRef) {
+      return this._getDefaultConfig();
+    }
+    return _stateRef._userConfig || this._getDefaultConfig();
+  }
+
+  /**
+   * Met à jour la config dans le State
+   */
+  _setConfig(config) {
+    if (_stateRef) {
+      _stateRef._userConfig = config;
+      _stateRef._hasUnsavedChanges = true;
+      _stateRef._notify('userConfig');
+      _stateRef._notify('unsavedChanges');
+    }
+    this._notify();
+  }
+
+  /**
+   * Config par défaut
+   */
+  _getDefaultConfig() {
+    return {
       customTags: [],
-
-      // Règles de détection de projet basées sur le titre
-      // Format: { name: 'PROJECT', patterns: ['pattern1', 'pattern2'] }
       projectRules: [],
-
-      // Liste noire de tickets (clés JIRA à ignorer)
       blacklist: []
     };
-
-    this._listeners = new Set();
-    this._load();
   }
 
   // ========================================
@@ -28,15 +57,16 @@ class UserConfigService {
   // ========================================
 
   get customTags() {
-    return [...this._config.customTags];
+    return [...(this._getConfig().customTags || [])];
   }
 
   get projectRules() {
-    return this._config.projectRules.map(r => ({ ...r, patterns: [...r.patterns] }));
+    const rules = this._getConfig().projectRules || [];
+    return rules.map(r => ({ ...r, patterns: [...r.patterns] }));
   }
 
   get blacklist() {
-    return [...this._config.blacklist];
+    return [...(this._getConfig().blacklist || [])];
   }
 
   // ========================================
@@ -44,22 +74,22 @@ class UserConfigService {
   // ========================================
 
   addCustomTag(tag) {
+    const config = { ...this._getConfig() };
     const normalizedTag = tag.trim();
-    if (normalizedTag && !this._config.customTags.includes(normalizedTag)) {
-      this._config.customTags.push(normalizedTag);
-      this._save();
-      this._notify();
+    if (normalizedTag && !config.customTags.includes(normalizedTag)) {
+      config.customTags = [...config.customTags, normalizedTag];
+      this._setConfig(config);
       return true;
     }
     return false;
   }
 
   removeCustomTag(tag) {
-    const index = this._config.customTags.indexOf(tag);
+    const config = { ...this._getConfig() };
+    const index = config.customTags.indexOf(tag);
     if (index !== -1) {
-      this._config.customTags.splice(index, 1);
-      this._save();
-      this._notify();
+      config.customTags = config.customTags.filter(t => t !== tag);
+      this._setConfig(config);
       return true;
     }
     return false;
@@ -70,73 +100,84 @@ class UserConfigService {
   // ========================================
 
   addProjectRule(name, patterns = []) {
-    const normalizedName = name.trim().toUpperCase();
-    const existingRule = this._config.projectRules.find(r => r.name === normalizedName);
+    const config = { ...this._getConfig() };
+    const normalizedName = name.trim();
+    const nameLower = normalizedName.toLowerCase();
+    const existingIndex = config.projectRules.findIndex(r => r.name.toLowerCase() === nameLower);
 
-    if (existingRule) {
+    if (existingIndex !== -1) {
       // Ajouter les patterns à la règle existante
+      const existingRule = config.projectRules[existingIndex];
       patterns.forEach(p => {
         const normalizedPattern = p.trim().toLowerCase();
-        if (normalizedPattern && !existingRule.patterns.includes(normalizedPattern)) {
+        if (normalizedPattern && !existingRule.patterns.some(ep => ep.toLowerCase() === normalizedPattern)) {
           existingRule.patterns.push(normalizedPattern);
         }
       });
+      config.projectRules = [...config.projectRules];
     } else {
       // Créer une nouvelle règle
-      this._config.projectRules.push({
+      config.projectRules = [...config.projectRules, {
         name: normalizedName,
         patterns: patterns.map(p => p.trim().toLowerCase()).filter(p => p)
-      });
+      }];
     }
 
-    this._save();
-    this._notify();
+    this._setConfig(config);
     return true;
   }
 
-  updateProjectRule(name, newPatterns) {
-    const rule = this._config.projectRules.find(r => r.name === name);
-    if (rule) {
-      rule.patterns = newPatterns.map(p => p.trim().toLowerCase()).filter(p => p);
-      this._save();
-      this._notify();
+  removeProjectRule(name) {
+    const config = { ...this._getConfig() };
+    const nameLower = name.toLowerCase();
+    const index = config.projectRules.findIndex(r => r.name.toLowerCase() === nameLower);
+    if (index !== -1) {
+      config.projectRules = config.projectRules.filter(r => r.name.toLowerCase() !== nameLower);
+      this._setConfig(config);
       return true;
     }
     return false;
   }
 
-  removeProjectRule(name) {
-    const index = this._config.projectRules.findIndex(r => r.name === name);
-    if (index !== -1) {
-      this._config.projectRules.splice(index, 1);
-      this._save();
-      this._notify();
+  renameProject(oldName, newName) {
+    const config = { ...this._getConfig() };
+    const oldNameLower = oldName.toLowerCase();
+    const rule = config.projectRules.find(r => r.name.toLowerCase() === oldNameLower);
+    if (rule && newName.trim()) {
+      rule.name = newName.trim();
+      config.projectRules = [...config.projectRules];
+      this._setConfig(config);
       return true;
     }
     return false;
   }
 
   addPatternToProject(projectName, pattern) {
-    const rule = this._config.projectRules.find(r => r.name === projectName);
+    const config = { ...this._getConfig() };
+    const projectNameLower = projectName.toLowerCase();
+    const rule = config.projectRules.find(r => r.name.toLowerCase() === projectNameLower);
     const normalizedPattern = pattern.trim().toLowerCase();
 
     if (rule && normalizedPattern && !rule.patterns.includes(normalizedPattern)) {
       rule.patterns.push(normalizedPattern);
-      this._save();
-      this._notify();
+      config.projectRules = [...config.projectRules];
+      this._setConfig(config);
       return true;
     }
     return false;
   }
 
   removePatternFromProject(projectName, pattern) {
-    const rule = this._config.projectRules.find(r => r.name === projectName);
+    const config = { ...this._getConfig() };
+    const projectNameLower = projectName.toLowerCase();
+    const rule = config.projectRules.find(r => r.name.toLowerCase() === projectNameLower);
     if (rule) {
-      const index = rule.patterns.indexOf(pattern);
+      const patternLower = pattern.toLowerCase();
+      const index = rule.patterns.findIndex(p => p.toLowerCase() === patternLower);
       if (index !== -1) {
         rule.patterns.splice(index, 1);
-        this._save();
-        this._notify();
+        config.projectRules = [...config.projectRules];
+        this._setConfig(config);
         return true;
       }
     }
@@ -145,20 +186,39 @@ class UserConfigService {
 
   /**
    * Détecte le projet d'un ticket basé sur son titre
-   * @param {string} title - Titre du ticket
-   * @returns {string|null} - Nom du projet détecté ou null
+   * Priorité: texte entre crochets [] > reste du titre
    */
   detectProjectFromTitle(title) {
     if (!title) return null;
     const titleLower = title.toLowerCase();
+    const rules = this._getConfig().projectRules || [];
 
-    for (const rule of this._config.projectRules) {
+    // Extraire le texte entre crochets
+    const bracketMatches = title.match(/\[([^\]]+)\]/g);
+    const bracketTexts = bracketMatches
+      ? bracketMatches.map(m => m.slice(1, -1).toLowerCase())
+      : [];
+
+    // 1. Priorité aux correspondances dans les crochets
+    for (const rule of rules) {
+      for (const pattern of rule.patterns) {
+        for (const bracketText of bracketTexts) {
+          if (bracketText.includes(pattern) || pattern.includes(bracketText)) {
+            return rule.name;
+          }
+        }
+      }
+    }
+
+    // 2. Sinon, chercher dans le titre complet
+    for (const rule of rules) {
       for (const pattern of rule.patterns) {
         if (titleLower.includes(pattern)) {
           return rule.name;
         }
       }
     }
+
     return null;
   }
 
@@ -167,23 +227,23 @@ class UserConfigService {
   // ========================================
 
   addToBlacklist(ticketKey) {
+    const config = { ...this._getConfig() };
     const normalizedKey = ticketKey.trim().toUpperCase();
-    if (normalizedKey && !this._config.blacklist.includes(normalizedKey)) {
-      this._config.blacklist.push(normalizedKey);
-      this._save();
-      this._notify();
+    if (normalizedKey && !config.blacklist.includes(normalizedKey)) {
+      config.blacklist = [...config.blacklist, normalizedKey];
+      this._setConfig(config);
       return true;
     }
     return false;
   }
 
   removeFromBlacklist(ticketKey) {
+    const config = { ...this._getConfig() };
     const normalizedKey = ticketKey.trim().toUpperCase();
-    const index = this._config.blacklist.indexOf(normalizedKey);
+    const index = config.blacklist.indexOf(normalizedKey);
     if (index !== -1) {
-      this._config.blacklist.splice(index, 1);
-      this._save();
-      this._notify();
+      config.blacklist = config.blacklist.filter(k => k !== normalizedKey);
+      this._setConfig(config);
       return true;
     }
     return false;
@@ -191,69 +251,59 @@ class UserConfigService {
 
   isBlacklisted(ticketKey) {
     if (!ticketKey) return false;
-    return this._config.blacklist.includes(ticketKey.toUpperCase());
+    const blacklist = this._getConfig().blacklist || [];
+    return blacklist.includes(ticketKey.toUpperCase());
   }
 
   // ========================================
-  // Persistance
+  // Reset
   // ========================================
-
-  _load() {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        this._config = {
-          customTags: parsed.customTags || [],
-          projectRules: parsed.projectRules || [],
-          blacklist: parsed.blacklist || []
-        };
-      }
-    } catch (e) {
-      console.error('Erreur chargement config:', e);
-    }
-  }
-
-  _save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this._config));
-    } catch (e) {
-      console.error('Erreur sauvegarde config:', e);
-    }
-  }
-
-  // ========================================
-  // Export/Import
-  // ========================================
-
-  exportConfig() {
-    return JSON.stringify(this._config, null, 2);
-  }
-
-  importConfig(jsonString) {
-    try {
-      const parsed = JSON.parse(jsonString);
-      this._config = {
-        customTags: parsed.customTags || [],
-        projectRules: parsed.projectRules || [],
-        blacklist: parsed.blacklist || []
-      };
-      this._save();
-      this._notify();
-      return { success: true };
-    } catch (e) {
-      return { success: false, error: e.message };
-    }
-  }
 
   reset() {
-    this._config = {
-      customTags: [],
-      projectRules: [],
-      blacklist: []
-    };
-    this._save();
-    this._notify();
+    this._setConfig(this._getDefaultConfig());
+  }
+
+  // ========================================
+  // Import / Export
+  // ========================================
+
+  /**
+   * Exporte la configuration en JSON
+   * @returns {string} JSON de la configuration
+   */
+  exportConfig() {
+    const config = this._getConfig();
+    return JSON.stringify({
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      config: config
+    }, null, 2);
+  }
+
+  /**
+   * Importe une configuration depuis JSON
+   * @param {string} jsonString - JSON de la configuration
+   * @returns {object} Résultat de l'import
+   */
+  importConfig(jsonString) {
+    try {
+      const data = JSON.parse(jsonString);
+
+      if (!data.config) {
+        return { success: false, error: 'Format invalide: config manquante' };
+      }
+
+      const newConfig = {
+        customTags: data.config.customTags || [],
+        projectRules: data.config.projectRules || [],
+        blacklist: data.config.blacklist || []
+      };
+
+      this._setConfig(newConfig);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   }
 
   // ========================================

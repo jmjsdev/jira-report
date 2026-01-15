@@ -16,6 +16,7 @@ import { Stats } from './components/stats.js';
 import { ImportModal } from './components/modals/import.js';
 import { ReportModal } from './components/modals/report.js';
 import { ConfigModal } from './components/modals/config.js';
+import { EditTaskModal } from './components/modals/edit-task.js';
 import { isFileSystemAccessSupported } from './utils/file.js';
 import { $ } from './utils/dom.js';
 
@@ -36,16 +37,20 @@ class JiraReportApp {
     Stats.init('#stats');
     Sidebar.init('#filters');
     Timeline.init('#timeline-container');
-    TaskTable.init('#projects-container', '#view-mode-container');
+    TaskTable.init('#projects-container');
     ImportModal.init('#import-modal');
     ReportModal.init('#report-modal');
     ConfigModal.init('#config-modal');
+    EditTaskModal.init('#edit-task-modal');
 
     // Attacher les raccourcis clavier
     this._attachKeyboardShortcuts();
 
     // Attacher les événements personnalisés
     this._attachCustomEvents();
+
+    // Attacher le drag & drop global
+    this._attachGlobalDragDrop();
 
     // Attacher les événements de beforeunload
     this._attachBeforeUnload();
@@ -56,8 +61,29 @@ class JiraReportApp {
     // Souscrire aux changements d'état pour l'indicateur de modifications
     State.subscribe('unsavedChanges', () => this._updateUnsavedIndicator());
 
+    // Tenter de recharger le dernier fichier ouvert
+    await this._tryAutoLoadLastFile();
+
+    // Activer le live save (sauvegarde automatique)
+    Storage.enableLiveSave();
+
     this._initialized = true;
     console.log('Jira Report App - Initialisé');
+  }
+
+  /**
+   * Tente de recharger automatiquement le dernier fichier
+   */
+  async _tryAutoLoadLastFile() {
+    try {
+      const result = await Storage.tryLoadLastProject();
+      if (result.success) {
+        this._showNotification(result.message, 'success');
+      }
+    } catch (err) {
+      // Échec silencieux - pas de notification d'erreur
+      console.warn('Auto-load failed:', err);
+    }
   }
 
   /**
@@ -94,6 +120,7 @@ class JiraReportApp {
         ImportModal.close();
         ReportModal.close();
         ConfigModal.close();
+        EditTaskModal.close();
       }
 
       // Ctrl+, ou Cmd+, : Configuration
@@ -112,9 +139,15 @@ class JiraReportApp {
     document.addEventListener('app:save', () => this._handleSave());
     document.addEventListener('app:import-xml', () => ImportModal.open());
     document.addEventListener('app:backup', () => this._handleBackup());
+    document.addEventListener('app:clear', () => this._handleClear());
     document.addEventListener('app:report-text', () => ReportModal.openText());
     document.addEventListener('app:report-html', () => ReportModal.openHtml());
     document.addEventListener('app:config', () => ConfigModal.open());
+    document.addEventListener('app:edit-task', (e) => {
+      if (e.detail && e.detail.taskKey) {
+        EditTaskModal.open(e.detail.taskKey);
+      }
+    });
   }
 
   /**
@@ -126,6 +159,64 @@ class JiraReportApp {
         e.preventDefault();
         e.returnValue = 'Vous avez des modifications non sauvegardées. Êtes-vous sûr de vouloir quitter ?';
         return e.returnValue;
+      }
+    });
+  }
+
+  /**
+   * Attache le drag & drop global pour les fichiers XML
+   */
+  _attachGlobalDragDrop() {
+    // Empêcher le comportement par défaut du navigateur
+    document.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    document.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Ajouter un indicateur visuel
+      document.body.classList.add('drag-over');
+    });
+
+    document.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Retirer l'indicateur seulement si on quitte vraiment le document
+      if (e.relatedTarget === null || !document.body.contains(e.relatedTarget)) {
+        document.body.classList.remove('drag-over');
+      }
+    });
+
+    document.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      document.body.classList.remove('drag-over');
+
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+
+      const file = files[0];
+      const fileName = file.name.toLowerCase();
+
+      // Fichier XML -> Import JIRA
+      if (fileName.endsWith('.xml') || file.type.includes('xml')) {
+        await ImportModal.openWithFile(file);
+      }
+      // Fichier JSON -> Ouvrir projet
+      else if (fileName.endsWith('.json') || file.type.includes('json')) {
+        try {
+          const content = await file.text();
+          const data = JSON.parse(content);
+          State.fromJSON(data);
+          this._showNotification(`Fichier chargé: ${file.name}`, 'success');
+        } catch (err) {
+          this._showNotification('Erreur: ' + err.message, 'error');
+        }
+      }
+      else {
+        this._showNotification('Format non supporté. Utilisez XML ou JSON.', 'error');
       }
     });
   }
@@ -188,6 +279,22 @@ class JiraReportApp {
     const result = Storage.downloadBackup();
     if (result.success) {
       this._showNotification(result.message, 'success');
+    }
+  }
+
+  /**
+   * Gère l'effacement de tous les tickets
+   */
+  _handleClear() {
+    const taskCount = State.tasks.length;
+    if (taskCount === 0) {
+      this._showNotification('Aucun ticket à effacer', 'info');
+      return;
+    }
+
+    if (confirm(`Effacer tous les ${taskCount} tickets ? Cette action est irréversible.`)) {
+      State.reset();
+      this._showNotification('Tous les tickets ont été effacés', 'success');
     }
   }
 

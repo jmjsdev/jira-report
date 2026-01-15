@@ -219,3 +219,135 @@ export function generateFilename(base = 'jira-report', ext = 'json') {
   const timestamp = date.toISOString().slice(0, 10);
   return `${base}-${timestamp}.${ext}`;
 }
+
+// ========================================
+// Persistance du FileHandle dans IndexedDB
+// ========================================
+
+const DB_NAME = 'jira-report-db';
+const DB_VERSION = 1;
+const STORE_NAME = 'file-handles';
+
+/**
+ * Ouvre la base IndexedDB
+ * @returns {Promise<IDBDatabase>}
+ */
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+/**
+ * Sauvegarde le file handle dans IndexedDB
+ * @param {FileSystemFileHandle} handle - Handle à sauvegarder
+ * @returns {Promise<void>}
+ */
+export async function saveFileHandle(handle) {
+  if (!handle) return;
+
+  try {
+    const db = await openDatabase();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.put(handle, 'lastFile');
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch (err) {
+    console.warn('Impossible de sauvegarder le file handle:', err);
+  }
+}
+
+/**
+ * Récupère le file handle depuis IndexedDB
+ * @returns {Promise<FileSystemFileHandle|null>}
+ */
+export async function getStoredFileHandle() {
+  try {
+    const db = await openDatabase();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get('lastFile');
+
+    const handle = await new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    db.close();
+    return handle || null;
+  } catch (err) {
+    console.warn('Impossible de récupérer le file handle:', err);
+    return null;
+  }
+}
+
+/**
+ * Supprime le file handle stocké
+ * @returns {Promise<void>}
+ */
+export async function clearStoredFileHandle() {
+  try {
+    const db = await openDatabase();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.delete('lastFile');
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch (err) {
+    console.warn('Impossible de supprimer le file handle:', err);
+  }
+}
+
+/**
+ * Tente de recharger le dernier fichier ouvert
+ * @returns {Promise<{success: boolean, handle?: FileSystemFileHandle, content?: object}>}
+ */
+export async function tryLoadLastFile() {
+  if (!isFileSystemAccessSupported()) {
+    return { success: false };
+  }
+
+  const handle = await getStoredFileHandle();
+  if (!handle) {
+    return { success: false };
+  }
+
+  try {
+    // Vérifier/demander la permission
+    const permission = await handle.queryPermission({ mode: 'readwrite' });
+    if (permission !== 'granted') {
+      const requestResult = await handle.requestPermission({ mode: 'readwrite' });
+      if (requestResult !== 'granted') {
+        return { success: false };
+      }
+    }
+
+    // Lire le fichier
+    const file = await handle.getFile();
+    const text = await file.text();
+    const content = JSON.parse(text);
+
+    return { success: true, handle, content, filename: file.name };
+  } catch (err) {
+    console.warn('Impossible de recharger le fichier:', err);
+    await clearStoredFileHandle();
+    return { success: false };
+  }
+}

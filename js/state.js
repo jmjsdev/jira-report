@@ -13,6 +13,13 @@ class AppState {
     this._people = new Set();
     this._tags = new Map(); // tag -> count
 
+    // Configuration utilisateur (sauvegardée dans le fichier)
+    this._userConfig = {
+      customTags: [],
+      projectRules: [],
+      blacklist: []
+    };
+
     // Filtres actifs
     this._filters = {
       project: 'all',
@@ -32,6 +39,9 @@ class AppState {
 
     // Listeners pour les changements d'état
     this._listeners = new Map();
+
+    // Connecter UserConfig à ce State
+    UserConfig.connectToState(this);
   }
 
   // ========================================
@@ -96,6 +106,9 @@ class AppState {
       this._hasUnsavedChanges = true;
       this._notify('tasks');
       this._notify('unsavedChanges');
+      console.log('Task updated:', key, updates);
+    } else {
+      console.warn('Task not found for update:', key);
     }
   }
 
@@ -128,6 +141,11 @@ class AppState {
 
   setUnsavedChanges(value) {
     this._hasUnsavedChanges = value;
+    this._notify('unsavedChanges');
+  }
+
+  markAsModified() {
+    this._hasUnsavedChanges = true;
     this._notify('unsavedChanges');
   }
 
@@ -230,12 +248,11 @@ class AppState {
         if (taskLabels.includes('done')) return false;
       }
 
-      // Filtre recherche
+      // Filtre recherche (uniquement sur le titre, pas la clé)
       if (this._filters.search) {
         const searchLower = this._filters.search.toLowerCase();
         const titleLower = (task.summary || '').toLowerCase();
-        const keyLower = (task.key || '').toLowerCase();
-        if (!titleLower.includes(searchLower) && !keyLower.includes(searchLower)) {
+        if (!titleLower.includes(searchLower)) {
           return false;
         }
       }
@@ -293,11 +310,14 @@ class AppState {
   }
 
   /**
-   * Compte les tâches par projet
+   * Compte les tâches par projet (exclut les blacklistés)
    */
   getProjectCounts() {
     const counts = new Map();
     this._tasks.forEach(task => {
+      // Ignorer les tickets blacklistés
+      if (UserConfig.isBlacklisted(task.key)) return;
+
       const project = (task.project || 'noproject').toLowerCase();
       counts.set(project, (counts.get(project) || 0) + 1);
     });
@@ -305,13 +325,16 @@ class AppState {
   }
 
   /**
-   * Compte les tâches par rapporteur
+   * Compte les tâches par rapporteur (exclut les blacklistés)
    */
   getPeopleCounts() {
     const counts = new Map();
     let noPersonCount = 0;
 
     this._tasks.forEach(task => {
+      // Ignorer les tickets blacklistés
+      if (UserConfig.isBlacklisted(task.key)) return;
+
       if (task.reporter) {
         const person = task.reporter.toLowerCase();
         counts.set(person, (counts.get(person) || 0) + 1);
@@ -398,9 +421,10 @@ class AppState {
    */
   toJSON() {
     return {
-      version: '1.0',
+      version: '1.1',
       exportDate: new Date().toISOString(),
       tasks: this._tasks,
+      config: this._userConfig,
       metadata: {
         projects: Array.from(this._projects),
         people: Array.from(this._people)
@@ -417,10 +441,94 @@ class AppState {
     }
 
     this._tasks = data.tasks;
+
+    // Charger la config si présente
+    if (data.config) {
+      this._userConfig = {
+        customTags: data.config.customTags || [],
+        projectRules: data.config.projectRules || [],
+        blacklist: data.config.blacklist || []
+      };
+    }
+
     this._extractMetadata();
     this._hasUnsavedChanges = false;
     this._notify('tasks');
+    this._notify('userConfig');
     this._notify('unsavedChanges');
+  }
+
+  // ========================================
+  // Édition de tickets
+  // ========================================
+
+  /**
+   * Met à jour les labels d'un ticket
+   */
+  updateTaskLabels(key, labels) {
+    const task = this._tasks.find(t => t.key === key);
+    if (task) {
+      task.labels = [...labels];
+      this._extractMetadata();
+      this._hasUnsavedChanges = true;
+      this._notify('tasks');
+      this._notify('unsavedChanges');
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Ajoute un label à un ticket
+   */
+  addLabelToTask(key, label) {
+    const task = this._tasks.find(t => t.key === key);
+    if (task) {
+      if (!task.labels) task.labels = [];
+      if (!task.labels.includes(label)) {
+        task.labels.push(label);
+        this._extractMetadata();
+        this._hasUnsavedChanges = true;
+        this._notify('tasks');
+        this._notify('unsavedChanges');
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Supprime un label d'un ticket
+   */
+  removeLabelFromTask(key, label) {
+    const task = this._tasks.find(t => t.key === key);
+    if (task && task.labels) {
+      const index = task.labels.indexOf(label);
+      if (index !== -1) {
+        task.labels.splice(index, 1);
+        this._extractMetadata();
+        this._hasUnsavedChanges = true;
+        this._notify('tasks');
+        this._notify('unsavedChanges');
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Met à jour la date d'échéance d'un ticket
+   */
+  updateTaskDueDate(key, dueDate) {
+    const task = this._tasks.find(t => t.key === key);
+    if (task) {
+      task.dueDate = dueDate ? new Date(dueDate).toISOString() : null;
+      this._hasUnsavedChanges = true;
+      this._notify('tasks');
+      this._notify('unsavedChanges');
+      return true;
+    }
+    return false;
   }
 
   /**

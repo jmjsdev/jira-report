@@ -2,11 +2,6 @@
  * Configuration de l'application Jira Report
  */
 export const Config = {
-  // URLs externes
-  urls: {
-    ajir: 'https://ajir.axa-fr.intraxa/browse/'
-  },
-
   // Mapping des priorités JIRA vers l'application
   priorityMap: {
     'Highest': { value: 5, text: 'Critique', class: 'critical' },

@@ -3,6 +3,7 @@
  */
 
 import { State } from '../state.js';
+import { UserConfig } from '../services/user-config.js';
 import { $, $$, setHtml, addClass, removeClass, delegate, debounce } from '../utils/dom.js';
 
 class SidebarComponent {
@@ -24,7 +25,8 @@ class SidebarComponent {
     }
 
     this.render();
-    this._attachEventListeners();
+    this._attachDelegatedListeners();
+    this._attachButtonListeners();
     this._subscribeToState();
   }
 
@@ -43,39 +45,8 @@ class SidebarComponent {
     setHtml(this._element, `
       <h2 class="sidebar-title">Filtres</h2>
 
-      <!-- Boutons d'action fichiers -->
-      <div class="file-actions">
-        <button id="btn-open" class="action-btn action-btn-secondary" title="Ouvrir un projet (Ctrl+O)">
-          <span class="btn-icon">📂</span> Ouvrir
-        </button>
-        <button id="btn-save" class="action-btn action-btn-primary" title="Sauvegarder (Ctrl+S)">
-          <span class="btn-icon">💾</span> Sauvegarder
-        </button>
-      </div>
-
-      <div class="file-actions">
-        <button id="btn-import-xml" class="action-btn action-btn-import" title="Importer un fichier XML JIRA">
-          <span class="btn-icon">📥</span> Import XML
-        </button>
-        <button id="btn-backup" class="action-btn action-btn-secondary" title="Télécharger un backup">
-          <span class="btn-icon">⬇️</span> Backup
-        </button>
-      </div>
-
-      <div class="file-actions">
-        <button id="btn-config" class="action-btn action-btn-secondary" title="Configuration (Ctrl+,)">
-          <span class="btn-icon">⚙️</span> Configuration
-        </button>
-      </div>
-
-      <!-- Boutons rapport -->
-      <div class="report-buttons-container">
-        <button id="btn-report-text" class="generate-report-btn">📝 Texte</button>
-        <button id="btn-report-html" class="generate-html-report-btn">🌐 HTML</button>
-      </div>
-
       <!-- Reset -->
-      <button id="btn-reset-filters" class="reset-filters-btn">🔄 Réinitialiser les filtres</button>
+      <button id="btn-reset-filters" class="reset-filters-btn">Réinitialiser</button>
 
       <!-- Recherche -->
       <div class="filter-group search-filter-group">
@@ -130,29 +101,32 @@ class SidebarComponent {
         </div>
       </div>
     `);
-
-    this._searchInput = $('#search-input', this._element);
-
-    // Restaurer la valeur de recherche si présente
-    if (State.filters.search) {
-      this._searchInput.value = State.filters.search;
-      $('#clear-search', this._element).classList.remove('hidden');
-    }
   }
 
   /**
    * Génère le HTML des filtres de projets
+   * N'affiche que les projets déclarés dans la config
    */
   _renderProjectFilters(projectCounts) {
-    return Array.from(projectCounts.entries())
-      .filter(([, count]) => count > 0)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([project, count]) => `
-        <button class="filter-btn ${State.filters.project === project ? 'active' : ''}"
-                data-filter="${project}">
-          ${project} <span class="tag-count">${count}</span>
-        </button>
-      `).join('');
+    const declaredProjects = UserConfig.projectRules;
+
+    // Si aucun projet déclaré, ne rien afficher
+    if (declaredProjects.length === 0) {
+      return '<span class="no-filters">Aucun projet déclaré</span>';
+    }
+
+    return declaredProjects
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(rule => {
+        const projectName = rule.name.toLowerCase();
+        const count = projectCounts.get(projectName) || 0;
+        return `
+          <button class="filter-btn ${State.filters.project === projectName ? 'active' : ''}"
+                  data-filter="${projectName}">
+            ${rule.name} <span class="tag-count">${count}</span>
+          </button>
+        `;
+      }).join('');
   }
 
   /**
@@ -197,62 +171,47 @@ class SidebarComponent {
   }
 
   /**
-   * Attache les écouteurs d'événements
+   * Attache les écouteurs délégués (une seule fois)
+   * Ces listeners utilisent la délégation d'événements et ne doivent pas être dupliqués
    */
-  _attachEventListeners() {
+  _attachDelegatedListeners() {
     // Délégation d'événements pour les boutons de filtre
     delegate(this._element, 'click', '.filter-btn', (e, btn) => {
       this._handleFilterClick(btn);
     });
 
-    // Recherche
-    const searchInput = $('#search-input', this._element);
-    if (searchInput) {
-      searchInput.addEventListener('input', debounce((e) => {
-        this._handleSearch(e.target.value);
-      }, 300));
+    // Délégation pour la recherche (input)
+    delegate(this._element, 'input', '#search-input', debounce((e) => {
+      this._handleSearch(e.target.value);
+    }, 300));
 
-      searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          this._clearSearch();
-        }
-      });
-    }
+    // Délégation pour escape dans la recherche
+    delegate(this._element, 'keydown', '#search-input', (e) => {
+      if (e.key === 'Escape') {
+        this._clearSearch();
+      }
+    });
 
-    // Clear search
-    const clearBtn = $('#clear-search', this._element);
-    if (clearBtn) {
-      clearBtn.addEventListener('click', () => this._clearSearch());
-    }
+    // Délégation pour clear search
+    delegate(this._element, 'click', '#clear-search', () => this._clearSearch());
 
-    // Reset filters
-    const resetBtn = $('#btn-reset-filters', this._element);
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        State.resetFilters();
-        this.render();
-      });
-    }
-
-    // Boutons d'action - dispatch des événements personnalisés
-    this._attachActionButton('btn-open', 'app:open');
-    this._attachActionButton('btn-save', 'app:save');
-    this._attachActionButton('btn-import-xml', 'app:import-xml');
-    this._attachActionButton('btn-backup', 'app:backup');
-    this._attachActionButton('btn-report-text', 'app:report-text');
-    this._attachActionButton('btn-report-html', 'app:report-html');
-    this._attachActionButton('btn-config', 'app:config');
+    // Délégation pour reset filters
+    delegate(this._element, 'click', '#btn-reset-filters', () => {
+      State.resetFilters();
+      this.render();
+    });
   }
 
   /**
-   * Attache un bouton à un événement personnalisé
+   * Attache les écouteurs sur les boutons (après chaque render si nécessaire)
    */
-  _attachActionButton(id, eventName) {
-    const btn = $(`#${id}`, this._element);
-    if (btn) {
-      btn.addEventListener('click', () => {
-        document.dispatchEvent(new CustomEvent(eventName));
-      });
+  _attachButtonListeners() {
+    this._searchInput = $('#search-input', this._element);
+
+    // Restaurer la valeur de recherche si présente
+    if (State.filters.search && this._searchInput) {
+      this._searchInput.value = State.filters.search;
+      $('#clear-search', this._element)?.classList.remove('hidden');
     }
   }
 
@@ -374,9 +333,16 @@ class SidebarComponent {
     // Re-render quand les tâches changent
     const unsubTasks = State.subscribe('tasks', () => {
       this.render();
-      this._attachEventListeners();
+      this._attachButtonListeners();
     });
     this._unsubscribers.push(unsubTasks);
+
+    // Re-render quand la config utilisateur change (projets, blacklist, etc.)
+    const unsubConfig = State.subscribe('userConfig', () => {
+      this.render();
+      this._attachButtonListeners();
+    });
+    this._unsubscribers.push(unsubConfig);
   }
 
   /**

@@ -1,10 +1,9 @@
 /**
- * Composant Stats - Affichage des statistiques
+ * Composant Stats - Barre d'outils et statistiques
  */
 
 import { State } from '../state.js';
-import { $, setHtml } from '../utils/dom.js';
-import { formatDateTime } from '../utils/date.js';
+import { $, setHtml, delegate } from '../utils/dom.js';
 
 class StatsComponent {
   constructor() {
@@ -24,34 +23,136 @@ class StatsComponent {
     }
 
     this.render();
+    this._attachEventListeners();
     this._subscribeToState();
   }
 
   /**
-   * Rend les statistiques
+   * Rend la barre
    */
   render() {
     const stats = State.getStats();
-    const now = new Date();
+    const viewMode = State.viewMode;
 
     setHtml(this._element, `
-      <div class="stat-item">
-        <div class="stat-value" id="total-tasks">${stats.totalTasks}</div>
-        <div class="stat-label">Tâches</div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-title">Statistiques</span>
+        <div class="ribbon-group-content">
+          <span class="stats-info"><strong>${stats.totalTasks}</strong> tâches</span>
+          <span class="stats-info"><strong>${stats.totalProjects}</strong> projets</span>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="stat-value" id="total-projects">${stats.totalProjects}</div>
-        <div class="stat-label">Projets</div>
+
+      <span class="stats-sep"></span>
+
+      <div class="ribbon-group">
+        <span class="ribbon-group-title">Fichier</span>
+        <div class="ribbon-group-content">
+          <button id="btn-open" class="stats-btn" title="Ouvrir (Ctrl+O)">
+            <span class="btn-icon">📂</span><span class="btn-label">Ouvrir</span>
+          </button>
+          <button id="btn-save" class="stats-btn stats-btn-primary" title="Sauvegarder (Ctrl+S)">
+            <span class="btn-icon">💾</span><span class="btn-label">Sauver</span>
+          </button>
+          <button id="btn-import-xml" class="stats-btn" title="Import XML (Ctrl+I)">
+            <span class="btn-icon">📥</span><span class="btn-label">Import</span>
+          </button>
+          <button id="btn-backup" class="stats-btn" title="Télécharger backup">
+            <span class="btn-icon">⬇️</span><span class="btn-label">Backup</span>
+          </button>
+          <button id="btn-clear" class="stats-btn stats-btn-danger" title="Effacer tous les tickets">
+            <span class="btn-icon">🗑️</span><span class="btn-label">Clear</span>
+          </button>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="stat-value" id="generated-date">${now.toLocaleDateString('fr-FR')}</div>
-        <div class="stat-label">Date</div>
+
+      <span class="stats-sep"></span>
+
+      <div class="ribbon-group">
+        <span class="ribbon-group-title">Affichage</span>
+        <div class="ribbon-group-content">
+          <button id="view-by-project" class="stats-btn stats-btn-toggle ${viewMode === 'project' ? 'active' : ''}" title="Vue par projet">
+            <span class="btn-icon">📁</span><span class="btn-label">Projet</span>
+          </button>
+          <button id="view-by-date" class="stats-btn stats-btn-toggle ${viewMode === 'date' ? 'active' : ''}" title="Vue par date">
+            <span class="btn-icon">📅</span><span class="btn-label">Date</span>
+          </button>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="stat-value" id="generated-time">${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
-        <div class="stat-label">Heure</div>
+
+      <span class="stats-sep"></span>
+
+      <div class="ribbon-group">
+        <span class="ribbon-group-title">Rapport</span>
+        <div class="ribbon-group-content">
+          <button id="btn-report-text" class="stats-btn" title="Rapport texte">
+            <span class="btn-icon">📝</span><span class="btn-label">Texte</span>
+          </button>
+          <button id="btn-report-html" class="stats-btn" title="Rapport HTML">
+            <span class="btn-icon">🌐</span><span class="btn-label">HTML</span>
+          </button>
+        </div>
       </div>
+
+      <span class="stats-spacer"></span>
+
+      <button id="btn-config" class="stats-btn" title="Configuration (Ctrl+,)">
+        <span class="btn-icon">⚙️</span><span class="btn-label">Config</span>
+      </button>
     `);
+  }
+
+  /**
+   * Attache les écouteurs d'événements
+   */
+  _attachEventListeners() {
+    // Boutons d'action
+    delegate(this._element, 'click', '#btn-open', () => {
+      document.dispatchEvent(new CustomEvent('app:open'));
+    });
+    delegate(this._element, 'click', '#btn-save', () => {
+      document.dispatchEvent(new CustomEvent('app:save'));
+    });
+    delegate(this._element, 'click', '#btn-import-xml', () => {
+      document.dispatchEvent(new CustomEvent('app:import-xml'));
+    });
+    delegate(this._element, 'click', '#btn-backup', () => {
+      document.dispatchEvent(new CustomEvent('app:backup'));
+    });
+    delegate(this._element, 'click', '#btn-clear', () => {
+      document.dispatchEvent(new CustomEvent('app:clear'));
+    });
+    delegate(this._element, 'click', '#btn-report-text', () => {
+      document.dispatchEvent(new CustomEvent('app:report-text'));
+    });
+    delegate(this._element, 'click', '#btn-report-html', () => {
+      document.dispatchEvent(new CustomEvent('app:report-html'));
+    });
+    delegate(this._element, 'click', '#btn-config', () => {
+      document.dispatchEvent(new CustomEvent('app:config'));
+    });
+
+    // Boutons de vue
+    delegate(this._element, 'click', '#view-by-project', () => {
+      State.setViewMode('project');
+      this._updateViewModeButtons();
+    });
+    delegate(this._element, 'click', '#view-by-date', () => {
+      State.setViewMode('date');
+      this._updateViewModeButtons();
+    });
+  }
+
+  /**
+   * Met à jour les boutons de vue
+   */
+  _updateViewModeButtons() {
+    const projectBtn = $('#view-by-project', this._element);
+    const dateBtn = $('#view-by-date', this._element);
+    const viewMode = State.viewMode;
+
+    projectBtn?.classList.toggle('active', viewMode === 'project');
+    dateBtn?.classList.toggle('active', viewMode === 'date');
   }
 
   /**

@@ -4,6 +4,7 @@
 
 import { State } from '../../state.js';
 import { Config } from '../../config.js';
+import { UserConfig } from '../../services/user-config.js';
 import { $, setHtml, addClass, removeClass, escapeAttr, copyToClipboard, copyHtmlToClipboard } from '../../utils/dom.js';
 import { formatDate } from '../../utils/date.js';
 
@@ -55,7 +56,7 @@ class ReportModalComponent {
             <input type="checkbox" id="report-col-projet" checked> Projet
           </label>
           <label class="column-checkbox">
-            <input type="checkbox" id="report-col-ajir" checked> AJIR
+            <input type="checkbox" id="report-col-jira" checked> JIRA
           </label>
         </div>
 
@@ -88,7 +89,7 @@ class ReportModalComponent {
     });
 
     // Checkboxes de colonnes
-    ['echeance', 'statut', 'personne', 'projet', 'ajir'].forEach(col => {
+    ['echeance', 'statut', 'personne', 'projet', 'jira'].forEach(col => {
       const checkbox = $(`#report-col-${col}`, this._element);
       checkbox?.addEventListener('change', () => this._refreshReport());
     });
@@ -182,7 +183,7 @@ class ReportModalComponent {
       statut: $('#report-col-statut', this._element)?.checked ?? true,
       personne: $('#report-col-personne', this._element)?.checked ?? true,
       projet: $('#report-col-projet', this._element)?.checked ?? true,
-      ajir: $('#report-col-ajir', this._element)?.checked ?? true
+      jira: $('#report-col-jira', this._element)?.checked ?? true
     };
   }
 
@@ -198,7 +199,7 @@ class ReportModalComponent {
     const COL_STATUT = 15;
     const COL_PERSONNE = 15;
     const COL_PROJET = 15;
-    const COL_AJIR = 14;
+    const COL_JIRA = 14;
     const COL_TITRE = 80;
 
     // Calculer la largeur totale
@@ -207,7 +208,7 @@ class ReportModalComponent {
     if (options.statut) totalWidth += COL_STATUT + 3;
     if (options.personne) totalWidth += COL_PERSONNE + 3;
     if (options.projet) totalWidth += COL_PROJET + 3;
-    if (options.ajir) totalWidth += COL_AJIR + 3;
+    if (options.jira) totalWidth += COL_JIRA + 3;
 
     // En-tête
     let report = 'RAPPORT DES TÂCHES - ' + new Date().toLocaleDateString('fr-FR', {
@@ -225,7 +226,7 @@ class ReportModalComponent {
     if (options.statut) header += 'Statut'.padEnd(COL_STATUT) + ' | ';
     if (options.personne) header += 'Rapporteur'.padEnd(COL_PERSONNE) + ' | ';
     if (options.projet) header += 'Projet'.padEnd(COL_PROJET) + ' | ';
-    if (options.ajir) header += 'AJIR'.padEnd(COL_AJIR) + ' | ';
+    if (options.jira) header += 'JIRA'.padEnd(COL_JIRA) + ' | ';
     header += 'Titre';
     report += header + '\n';
     report += '-'.repeat(totalWidth) + '\n';
@@ -263,7 +264,7 @@ class ReportModalComponent {
       if (options.statut) row += ((task.statusIcon || '') + ' ' + (task.statusLabel || 'Backlog')).padEnd(COL_STATUT) + ' | ';
       if (options.personne) row += (task.reporter || '-').padEnd(COL_PERSONNE) + ' | ';
       if (options.projet) row += (task.project || '-').padEnd(COL_PROJET) + ' | ';
-      if (options.ajir) row += (task.key || '-').padEnd(COL_AJIR) + ' | ';
+      if (options.jira) row += (task.key || '-').padEnd(COL_JIRA) + ' | ';
       row += task.summary || '';
       report += row + '\n';
     });
@@ -311,7 +312,7 @@ class ReportModalComponent {
             ${options.statut ? '<th data-sort="status">Statut<span class="sort-indicator"></span></th>' : ''}
             ${options.personne ? '<th data-sort="person">Rapporteur<span class="sort-indicator"></span></th>' : ''}
             ${options.projet ? '<th data-sort="project">Projet<span class="sort-indicator"></span></th>' : ''}
-            ${options.ajir ? '<th data-sort="ajir">AJIR<span class="sort-indicator"></span></th>' : ''}
+            ${options.jira ? '<th data-sort="jira">JIRA<span class="sort-indicator"></span></th>' : ''}
             <th data-sort="title">Titre<span class="sort-indicator"></span></th>
           </tr>
         </thead>
@@ -324,9 +325,9 @@ class ReportModalComponent {
       const statusCss = task.statusCssClass || 'status-backlog';
       const titleClass = isDone ? 'title-done' : '';
 
-      const ajirUrl = task.key ? `${Config.urls.ajir}${task.key}` : null;
-      const titleHtml = ajirUrl
-        ? `<a href="${ajirUrl}" target="_blank" class="title-link ${titleClass}">${escapeAttr(task.summary || '')}</a>`
+      const jiraUrl = task.link || null;
+      const titleHtml = jiraUrl
+        ? `<a href="${jiraUrl}" target="_blank" class="title-link ${titleClass}">${escapeAttr(task.summary || '')}</a>`
         : (isDone ? `<span class="${titleClass}">${escapeAttr(task.summary || '')}</span>` : escapeAttr(task.summary || ''));
 
       html += `
@@ -336,12 +337,12 @@ class ReportModalComponent {
             data-status="${task.statusKey || 'backlog'}"
             data-person="${escapeAttr(task.reporter || '')}"
             data-project="${escapeAttr(task.project || '')}"
-            data-ajir="${task.key || ''}">
+            data-jira="${task.key || ''}">
           ${options.echeance ? `<td>${formatDate(task.dueDate) || '-'}</td>` : ''}
           ${options.statut ? `<td class="cell-status"><span class="status-badge ${statusCss}">${task.statusIcon || ''} ${task.statusLabel || 'Backlog'}</span></td>` : ''}
           ${options.personne ? `<td>${task.reporter || '-'}</td>` : ''}
           ${options.projet ? `<td>${task.project || '-'}</td>` : ''}
-          ${options.ajir ? `<td>${task.key || '-'}</td>` : ''}
+          ${options.jira ? `<td>${task.key || '-'}</td>` : ''}
           <td>${titleHtml}</td>
         </tr>
       `;

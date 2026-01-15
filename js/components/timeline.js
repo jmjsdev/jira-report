@@ -4,6 +4,7 @@
 
 import { State } from '../state.js';
 import { Config } from '../config.js';
+import { UserConfig } from '../services/user-config.js';
 import { $, setHtml, escapeAttr } from '../utils/dom.js';
 import { formatDateShort, normalizeToMidnight, isToday, getDueClass } from '../utils/date.js';
 
@@ -169,7 +170,7 @@ class TimelineComponent {
         ? task.summary.substring(0, 50) + '...'
         : task.summary;
 
-      const url = task.key ? `${Config.urls.ajir}${task.key}` : '#';
+      const url = task.link || '#';
 
       html += `
         <a href="${url}" target="_blank"

@@ -41,8 +41,8 @@
 }
 
 .modal-content-large {
-  max-width: 1000px;
-  max-height: 85vh;
+  max-width: 1200px;
+  max-height: 92vh;
 }
 
 @keyframes slideUp {
@@ -310,16 +310,28 @@
 }
 
 /* ============================================
+   Input Row (Dropzone + Textarea)
+   ============================================ */
+.jira-input-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* ============================================
    Dropzone
    ============================================ */
 .jira-dropzone {
+  flex: 0 0 33%;
   border: 2px dashed var(--color-gray-300);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 16px;
   text-align: center;
-  margin-bottom: 12px;
   transition: all var(--transition-normal);
   background: var(--color-bg-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .jira-dropzone:hover {
@@ -341,18 +353,7 @@
 }
 
 .jira-dropzone-icon {
-  font-size: 32px;
-}
-
-.jira-dropzone-text {
-  font-size: 14px;
-  color: var(--color-gray-700);
-  font-weight: 500;
-}
-
-.jira-dropzone-or {
-  font-size: 12px;
-  color: var(--color-gray-600);
+  font-size: 24px;
 }
 
 .jira-file-btn {
@@ -380,15 +381,15 @@
    Input XML
    ============================================ */
 .jira-xml-input {
-  width: 100%;
-  min-height: 150px;
-  max-height: 200px;
+  flex: 1;
+  min-height: 100px;
+  max-height: 120px;
   padding: 12px;
   border: 1px solid var(--color-gray-300);
   border-radius: var(--radius-md);
   font-family: var(--font-mono);
   font-size: 12px;
-  resize: vertical;
+  resize: none;
   background: var(--color-bg-alt);
 }
 
@@ -404,8 +405,43 @@
 .jira-import-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin: 16px 0;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.jira-import-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.jira-stat-inline {
+  font-size: 13px;
+  color: var(--color-gray-600);
+  padding: 4px 10px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-sm);
+}
+
+.jira-stat-inline strong {
+  font-weight: 700;
+}
+
+.jira-stat-inline.jira-stat-total strong {
+  color: var(--color-primary);
+}
+
+.jira-stat-inline.jira-stat-new {
+  background: #d4edda;
+}
+
+.jira-stat-inline.jira-stat-new strong {
+  color: var(--color-success);
+}
+
+.jira-stat-inline.jira-stat-existing strong {
+  color: var(--color-gray-500);
 }
 
 .analyze-jira-btn {
@@ -577,19 +613,164 @@
 }
 
 /* ============================================
+   Modal Import - Layout spécial
+   ============================================ */
+.modal-import {
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+}
+
+.modal-import .modal-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.modal-import .jira-import-results {
+  flex: 1;
+  min-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  background: var(--color-bg);
+}
+
+/* ============================================
    Actions finales Import
    ============================================ */
 .import-actions-final {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-gray-300);
+  flex-shrink: 0;
+}
+
+.import-actions-row {
+  display: flex;
+  gap: 12px;
 }
 
 .import-actions-final .action-btn {
   flex: 1;
   padding: 12px 20px;
+}
+
+.import-update-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-300);
+}
+
+.update-options-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-gray-700);
+}
+
+.update-options-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.update-options-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-gray-700);
+  cursor: pointer;
+}
+
+.update-options-checkboxes input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.import-update-options .action-btn {
+  align-self: flex-end;
+  flex: none;
+  padding: 10px 20px;
+}
+
+.update-fields-section {
+  margin-bottom: 12px;
+}
+
+.update-tickets-section {
+  border-top: 1px solid var(--color-gray-300);
+  padding-top: 12px;
+}
+
+.update-tickets-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-gray-600);
+  cursor: pointer;
+}
+
+.update-tickets-list {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-sm);
+}
+
+.update-ticket-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.update-ticket-item:hover {
+  background: var(--color-gray-100);
+}
+
+.update-ticket-key {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-primary);
+  min-width: 80px;
+}
+
+.update-ticket-summary {
+  font-size: 12px;
+  color: var(--color-gray-700);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-tickets {
+  font-size: 12px;
+  color: var(--color-gray-500);
+  font-style: italic;
+  padding: 8px;
 }
 
 /* ============================================
@@ -738,7 +919,30 @@
 .config-project-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
+}
+
+.config-project-name-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--color-gray-800);
+}
+
+.config-project-name-input:hover {
+  border-color: var(--color-gray-300);
+  background: var(--color-bg);
+}
+
+.config-project-name-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-bg);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
 }
 
 .config-item-label {
@@ -808,4 +1012,376 @@
 
 .config-add-pattern-inline {
   display: inline-flex;
+}
+
+.config-footer-hint {
+  font-size: 13px;
+  color: var(--color-gray-500);
+  font-style: italic;
+  margin-left: auto;
+}
+
+.config-refresh-btn {
+  padding: 8px 16px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-normal);
+}
+
+.config-refresh-btn:hover {
+  background: var(--color-primary-dark);
+}
+
+.config-refresh-status {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.config-refresh-status.success {
+  color: var(--color-success);
+}
+
+.config-refresh-status.error {
+  color: var(--color-warning);
+}
+
+.config-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.config-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-io-btn {
+  padding: 6px 12px;
+  background: var(--color-bg-alt);
+  color: var(--color-text);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.config-io-btn:hover {
+  background: var(--color-gray-200);
+  border-color: var(--color-gray-400);
+}
+
+/* Suggestions de projets */
+.config-suggestions-box {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fffbeb;
+  border: 1px dashed var(--color-warning);
+  border-radius: var(--radius-md);
+}
+
+.config-suggestions-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--color-gray-600);
+  margin-bottom: 8px;
+}
+
+.config-suggestions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.config-suggestion {
+  padding: 4px 10px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  color: var(--color-gray-700);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.config-suggestion:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.config-suggestion .suggestion-count {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  background: var(--color-gray-200);
+  border-radius: 8px;
+  font-size: 10px;
+  color: var(--color-gray-600);
+}
+
+/* ============================================
+   Modal Edition Ticket
+   ============================================ */
+.modal-content-medium {
+  max-width: 600px;
+}
+
+.edit-section {
+  margin-bottom: 20px;
+}
+
+.edit-section-row {
+  display: flex;
+  gap: 16px;
+}
+
+.edit-field {
+  flex: 1;
+}
+
+.edit-section label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-gray-700);
+  margin-bottom: 8px;
+}
+
+.jira-link {
+  display: block;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 8px 12px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jira-link:hover {
+  background: var(--color-primary-light);
+  text-decoration: underline;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  background: var(--color-bg);
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+}
+
+/* Boutons de date rapide */
+.date-quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.date-quick-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  color: var(--color-gray-700);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.date-quick-btn:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.date-quick-btn-clear {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.date-quick-btn-clear:hover {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: white;
+}
+
+.edit-labels-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 40px;
+  padding: 12px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-200);
+  margin-bottom: 12px;
+}
+
+.no-labels {
+  color: var(--color-gray-500);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.edit-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.edit-label.label-done {
+  background: #d4edda;
+  color: var(--color-success);
+}
+
+.label-remove-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: all var(--transition-normal);
+}
+
+.label-remove-btn:hover {
+  background: var(--color-error);
+  color: white;
+  opacity: 1;
+}
+
+.edit-add-label {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.edit-input-small {
+  flex: 1;
+}
+
+.edit-add-btn {
+  padding: 8px 16px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-normal);
+}
+
+.edit-add-btn:hover {
+  background: var(--color-primary-dark);
+}
+
+.edit-suggested-labels {
+  padding: 12px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-gray-300);
+}
+
+.suggested-label-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--color-gray-500);
+  margin-bottom: 8px;
+}
+
+#edit-suggested-labels-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.suggested-label {
+  padding: 4px 10px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  color: var(--color-gray-600);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.suggested-label:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.no-suggestions {
+  font-size: 12px;
+  color: var(--color-gray-500);
+  font-style: italic;
+}
+
+.save-task-btn {
+  padding: 10px 24px;
+  background: var(--color-success);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.save-task-btn:hover {
+  background: #218838;
+}
+
+.cancel-task-btn {
+  padding: 10px 24px;
+  background: var(--color-gray-200);
+  color: var(--color-gray-700);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.cancel-task-btn:hover {
+  background: var(--color-gray-300);
 }

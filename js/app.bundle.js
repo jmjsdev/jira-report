@@ -1,51 +1,79 @@
 (() => {
   // js/services/user-config.js
-  var STORAGE_KEY = "jira-report-config";
+  var _stateRef = null;
   var UserConfigService = class {
     constructor() {
-      this._config = {
-        // Tags personnalisés (affichés dans les filtres même si pas dans les tickets)
+      this._listeners = /* @__PURE__ */ new Set();
+    }
+    /**
+     * Connecte le service au State (appelé par State)
+     */
+    connectToState(state) {
+      _stateRef = state;
+    }
+    /**
+     * Retourne la config depuis le State
+     */
+    _getConfig() {
+      if (!_stateRef) {
+        return this._getDefaultConfig();
+      }
+      return _stateRef._userConfig || this._getDefaultConfig();
+    }
+    /**
+     * Met à jour la config dans le State
+     */
+    _setConfig(config) {
+      if (_stateRef) {
+        _stateRef._userConfig = config;
+        _stateRef._hasUnsavedChanges = true;
+        _stateRef._notify("userConfig");
+        _stateRef._notify("unsavedChanges");
+      }
+      this._notify();
+    }
+    /**
+     * Config par défaut
+     */
+    _getDefaultConfig() {
+      return {
         customTags: [],
-        // Règles de détection de projet basées sur le titre
-        // Format: { name: 'PROJECT', patterns: ['pattern1', 'pattern2'] }
         projectRules: [],
-        // Liste noire de tickets (clés JIRA à ignorer)
         blacklist: []
       };
-      this._listeners = /* @__PURE__ */ new Set();
-      this._load();
     }
     // ========================================
     // Getters
     // ========================================
     get customTags() {
-      return [...this._config.customTags];
+      return [...this._getConfig().customTags || []];
     }
     get projectRules() {
-      return this._config.projectRules.map((r) => ({ ...r, patterns: [...r.patterns] }));
+      const rules = this._getConfig().projectRules || [];
+      return rules.map((r) => ({ ...r, patterns: [...r.patterns] }));
     }
     get blacklist() {
-      return [...this._config.blacklist];
+      return [...this._getConfig().blacklist || []];
     }
     // ========================================
     // Tags personnalisés
     // ========================================
     addCustomTag(tag) {
+      const config = { ...this._getConfig() };
       const normalizedTag = tag.trim();
-      if (normalizedTag && !this._config.customTags.includes(normalizedTag)) {
-        this._config.customTags.push(normalizedTag);
-        this._save();
-        this._notify();
+      if (normalizedTag && !config.customTags.includes(normalizedTag)) {
+        config.customTags = [...config.customTags, normalizedTag];
+        this._setConfig(config);
         return true;
       }
       return false;
     }
     removeCustomTag(tag) {
-      const index = this._config.customTags.indexOf(tag);
+      const config = { ...this._getConfig() };
+      const index = config.customTags.indexOf(tag);
       if (index !== -1) {
-        this._config.customTags.splice(index, 1);
-        this._save();
-        this._notify();
+        config.customTags = config.customTags.filter((t) => t !== tag);
+        this._setConfig(config);
         return true;
       }
       return false;
@@ -54,64 +82,75 @@
     // Règles de projet
     // ========================================
     addProjectRule(name, patterns = []) {
-      const normalizedName = name.trim().toUpperCase();
-      const existingRule = this._config.projectRules.find((r) => r.name === normalizedName);
-      if (existingRule) {
+      const config = { ...this._getConfig() };
+      const normalizedName = name.trim();
+      const nameLower = normalizedName.toLowerCase();
+      const existingIndex = config.projectRules.findIndex((r) => r.name.toLowerCase() === nameLower);
+      if (existingIndex !== -1) {
+        const existingRule = config.projectRules[existingIndex];
         patterns.forEach((p) => {
           const normalizedPattern = p.trim().toLowerCase();
-          if (normalizedPattern && !existingRule.patterns.includes(normalizedPattern)) {
+          if (normalizedPattern && !existingRule.patterns.some((ep) => ep.toLowerCase() === normalizedPattern)) {
             existingRule.patterns.push(normalizedPattern);
           }
         });
+        config.projectRules = [...config.projectRules];
       } else {
-        this._config.projectRules.push({
+        config.projectRules = [...config.projectRules, {
           name: normalizedName,
           patterns: patterns.map((p) => p.trim().toLowerCase()).filter((p) => p)
-        });
+        }];
       }
-      this._save();
-      this._notify();
+      this._setConfig(config);
       return true;
     }
-    updateProjectRule(name, newPatterns) {
-      const rule = this._config.projectRules.find((r) => r.name === name);
-      if (rule) {
-        rule.patterns = newPatterns.map((p) => p.trim().toLowerCase()).filter((p) => p);
-        this._save();
-        this._notify();
+    removeProjectRule(name) {
+      const config = { ...this._getConfig() };
+      const nameLower = name.toLowerCase();
+      const index = config.projectRules.findIndex((r) => r.name.toLowerCase() === nameLower);
+      if (index !== -1) {
+        config.projectRules = config.projectRules.filter((r) => r.name.toLowerCase() !== nameLower);
+        this._setConfig(config);
         return true;
       }
       return false;
     }
-    removeProjectRule(name) {
-      const index = this._config.projectRules.findIndex((r) => r.name === name);
-      if (index !== -1) {
-        this._config.projectRules.splice(index, 1);
-        this._save();
-        this._notify();
+    renameProject(oldName, newName) {
+      const config = { ...this._getConfig() };
+      const oldNameLower = oldName.toLowerCase();
+      const rule = config.projectRules.find((r) => r.name.toLowerCase() === oldNameLower);
+      if (rule && newName.trim()) {
+        rule.name = newName.trim();
+        config.projectRules = [...config.projectRules];
+        this._setConfig(config);
         return true;
       }
       return false;
     }
     addPatternToProject(projectName, pattern) {
-      const rule = this._config.projectRules.find((r) => r.name === projectName);
+      const config = { ...this._getConfig() };
+      const projectNameLower = projectName.toLowerCase();
+      const rule = config.projectRules.find((r) => r.name.toLowerCase() === projectNameLower);
       const normalizedPattern = pattern.trim().toLowerCase();
       if (rule && normalizedPattern && !rule.patterns.includes(normalizedPattern)) {
         rule.patterns.push(normalizedPattern);
-        this._save();
-        this._notify();
+        config.projectRules = [...config.projectRules];
+        this._setConfig(config);
         return true;
       }
       return false;
     }
     removePatternFromProject(projectName, pattern) {
-      const rule = this._config.projectRules.find((r) => r.name === projectName);
+      const config = { ...this._getConfig() };
+      const projectNameLower = projectName.toLowerCase();
+      const rule = config.projectRules.find((r) => r.name.toLowerCase() === projectNameLower);
       if (rule) {
-        const index = rule.patterns.indexOf(pattern);
+        const patternLower = pattern.toLowerCase();
+        const index = rule.patterns.findIndex((p) => p.toLowerCase() === patternLower);
         if (index !== -1) {
           rule.patterns.splice(index, 1);
-          this._save();
-          this._notify();
+          config.projectRules = [...config.projectRules];
+          this._setConfig(config);
           return true;
         }
       }
@@ -119,13 +158,24 @@
     }
     /**
      * Détecte le projet d'un ticket basé sur son titre
-     * @param {string} title - Titre du ticket
-     * @returns {string|null} - Nom du projet détecté ou null
+     * Priorité: texte entre crochets [] > reste du titre
      */
     detectProjectFromTitle(title) {
       if (!title) return null;
       const titleLower = title.toLowerCase();
-      for (const rule of this._config.projectRules) {
+      const rules = this._getConfig().projectRules || [];
+      const bracketMatches = title.match(/\[([^\]]+)\]/g);
+      const bracketTexts = bracketMatches ? bracketMatches.map((m) => m.slice(1, -1).toLowerCase()) : [];
+      for (const rule of rules) {
+        for (const pattern of rule.patterns) {
+          for (const bracketText of bracketTexts) {
+            if (bracketText.includes(pattern) || pattern.includes(bracketText)) {
+              return rule.name;
+            }
+          }
+        }
+      }
+      for (const rule of rules) {
         for (const pattern of rule.patterns) {
           if (titleLower.includes(pattern)) {
             return rule.name;
@@ -138,84 +188,73 @@
     // Blacklist
     // ========================================
     addToBlacklist(ticketKey) {
+      const config = { ...this._getConfig() };
       const normalizedKey = ticketKey.trim().toUpperCase();
-      if (normalizedKey && !this._config.blacklist.includes(normalizedKey)) {
-        this._config.blacklist.push(normalizedKey);
-        this._save();
-        this._notify();
+      if (normalizedKey && !config.blacklist.includes(normalizedKey)) {
+        config.blacklist = [...config.blacklist, normalizedKey];
+        this._setConfig(config);
         return true;
       }
       return false;
     }
     removeFromBlacklist(ticketKey) {
+      const config = { ...this._getConfig() };
       const normalizedKey = ticketKey.trim().toUpperCase();
-      const index = this._config.blacklist.indexOf(normalizedKey);
+      const index = config.blacklist.indexOf(normalizedKey);
       if (index !== -1) {
-        this._config.blacklist.splice(index, 1);
-        this._save();
-        this._notify();
+        config.blacklist = config.blacklist.filter((k) => k !== normalizedKey);
+        this._setConfig(config);
         return true;
       }
       return false;
     }
     isBlacklisted(ticketKey) {
       if (!ticketKey) return false;
-      return this._config.blacklist.includes(ticketKey.toUpperCase());
+      const blacklist = this._getConfig().blacklist || [];
+      return blacklist.includes(ticketKey.toUpperCase());
     }
     // ========================================
-    // Persistance
+    // Reset
     // ========================================
-    _load() {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          this._config = {
-            customTags: parsed.customTags || [],
-            projectRules: parsed.projectRules || [],
-            blacklist: parsed.blacklist || []
-          };
-        }
-      } catch (e) {
-        console.error("Erreur chargement config:", e);
-      }
-    }
-    _save() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this._config));
-      } catch (e) {
-        console.error("Erreur sauvegarde config:", e);
-      }
+    reset() {
+      this._setConfig(this._getDefaultConfig());
     }
     // ========================================
-    // Export/Import
+    // Import / Export
     // ========================================
+    /**
+     * Exporte la configuration en JSON
+     * @returns {string} JSON de la configuration
+     */
     exportConfig() {
-      return JSON.stringify(this._config, null, 2);
+      const config = this._getConfig();
+      return JSON.stringify({
+        version: "1.0",
+        exportDate: (/* @__PURE__ */ new Date()).toISOString(),
+        config
+      }, null, 2);
     }
+    /**
+     * Importe une configuration depuis JSON
+     * @param {string} jsonString - JSON de la configuration
+     * @returns {object} Résultat de l'import
+     */
     importConfig(jsonString) {
       try {
-        const parsed = JSON.parse(jsonString);
-        this._config = {
-          customTags: parsed.customTags || [],
-          projectRules: parsed.projectRules || [],
-          blacklist: parsed.blacklist || []
+        const data = JSON.parse(jsonString);
+        if (!data.config) {
+          return { success: false, error: "Format invalide: config manquante" };
+        }
+        const newConfig = {
+          customTags: data.config.customTags || [],
+          projectRules: data.config.projectRules || [],
+          blacklist: data.config.blacklist || []
         };
-        this._save();
-        this._notify();
+        this._setConfig(newConfig);
         return { success: true };
-      } catch (e) {
-        return { success: false, error: e.message };
+      } catch (err) {
+        return { success: false, error: err.message };
       }
-    }
-    reset() {
-      this._config = {
-        customTags: [],
-        projectRules: [],
-        blacklist: []
-      };
-      this._save();
-      this._notify();
     }
     // ========================================
     // Événements
@@ -243,6 +282,11 @@
       this._projects = /* @__PURE__ */ new Set();
       this._people = /* @__PURE__ */ new Set();
       this._tags = /* @__PURE__ */ new Map();
+      this._userConfig = {
+        customTags: [],
+        projectRules: [],
+        blacklist: []
+      };
       this._filters = {
         project: "all",
         person: null,
@@ -255,6 +299,7 @@
       this._currentFileHandle = null;
       this._hasUnsavedChanges = false;
       this._listeners = /* @__PURE__ */ new Map();
+      UserConfig.connectToState(this);
     }
     // ========================================
     // Getters
@@ -306,6 +351,9 @@
         this._hasUnsavedChanges = true;
         this._notify("tasks");
         this._notify("unsavedChanges");
+        console.log("Task updated:", key, updates);
+      } else {
+        console.warn("Task not found for update:", key);
       }
     }
     removeTask(key) {
@@ -333,6 +381,10 @@
     }
     setUnsavedChanges(value) {
       this._hasUnsavedChanges = value;
+      this._notify("unsavedChanges");
+    }
+    markAsModified() {
+      this._hasUnsavedChanges = true;
       this._notify("unsavedChanges");
     }
     resetFilters() {
@@ -413,8 +465,7 @@
         if (this._filters.search) {
           const searchLower = this._filters.search.toLowerCase();
           const titleLower = (task.summary || "").toLowerCase();
-          const keyLower = (task.key || "").toLowerCase();
-          if (!titleLower.includes(searchLower) && !keyLower.includes(searchLower)) {
+          if (!titleLower.includes(searchLower)) {
             return false;
           }
         }
@@ -463,23 +514,25 @@
       };
     }
     /**
-     * Compte les tâches par projet
+     * Compte les tâches par projet (exclut les blacklistés)
      */
     getProjectCounts() {
       const counts = /* @__PURE__ */ new Map();
       this._tasks.forEach((task) => {
+        if (UserConfig.isBlacklisted(task.key)) return;
         const project = (task.project || "noproject").toLowerCase();
         counts.set(project, (counts.get(project) || 0) + 1);
       });
       return counts;
     }
     /**
-     * Compte les tâches par rapporteur
+     * Compte les tâches par rapporteur (exclut les blacklistés)
      */
     getPeopleCounts() {
       const counts = /* @__PURE__ */ new Map();
       let noPersonCount = 0;
       this._tasks.forEach((task) => {
+        if (UserConfig.isBlacklisted(task.key)) return;
         if (task.reporter) {
           const person = task.reporter.toLowerCase();
           counts.set(person, (counts.get(person) || 0) + 1);
@@ -550,9 +603,10 @@
      */
     toJSON() {
       return {
-        version: "1.0",
+        version: "1.1",
         exportDate: (/* @__PURE__ */ new Date()).toISOString(),
         tasks: this._tasks,
+        config: this._userConfig,
         metadata: {
           projects: Array.from(this._projects),
           people: Array.from(this._people)
@@ -567,10 +621,86 @@
         throw new Error("Format JSON invalide");
       }
       this._tasks = data.tasks;
+      if (data.config) {
+        this._userConfig = {
+          customTags: data.config.customTags || [],
+          projectRules: data.config.projectRules || [],
+          blacklist: data.config.blacklist || []
+        };
+      }
       this._extractMetadata();
       this._hasUnsavedChanges = false;
       this._notify("tasks");
+      this._notify("userConfig");
       this._notify("unsavedChanges");
+    }
+    // ========================================
+    // Édition de tickets
+    // ========================================
+    /**
+     * Met à jour les labels d'un ticket
+     */
+    updateTaskLabels(key, labels) {
+      const task = this._tasks.find((t) => t.key === key);
+      if (task) {
+        task.labels = [...labels];
+        this._extractMetadata();
+        this._hasUnsavedChanges = true;
+        this._notify("tasks");
+        this._notify("unsavedChanges");
+        return true;
+      }
+      return false;
+    }
+    /**
+     * Ajoute un label à un ticket
+     */
+    addLabelToTask(key, label) {
+      const task = this._tasks.find((t) => t.key === key);
+      if (task) {
+        if (!task.labels) task.labels = [];
+        if (!task.labels.includes(label)) {
+          task.labels.push(label);
+          this._extractMetadata();
+          this._hasUnsavedChanges = true;
+          this._notify("tasks");
+          this._notify("unsavedChanges");
+          return true;
+        }
+      }
+      return false;
+    }
+    /**
+     * Supprime un label d'un ticket
+     */
+    removeLabelFromTask(key, label) {
+      const task = this._tasks.find((t) => t.key === key);
+      if (task && task.labels) {
+        const index = task.labels.indexOf(label);
+        if (index !== -1) {
+          task.labels.splice(index, 1);
+          this._extractMetadata();
+          this._hasUnsavedChanges = true;
+          this._notify("tasks");
+          this._notify("unsavedChanges");
+          return true;
+        }
+      }
+      return false;
+    }
+    /**
+     * Met à jour la date d'échéance d'un ticket
+     */
+    updateTaskDueDate(key, dueDate) {
+      const task = this._tasks.find((t) => t.key === key);
+      if (task) {
+        task.dueDate = dueDate ? new Date(dueDate).toISOString() : null;
+        this._hasUnsavedChanges = true;
+        this._notify("tasks");
+        this._notify("unsavedChanges");
+        return true;
+      }
+      return false;
     }
     /**
      * Réinitialise l'état
@@ -716,13 +846,99 @@
     const timestamp = date.toISOString().slice(0, 10);
     return `${base}-${timestamp}.${ext}`;
   }
+  var DB_NAME = "jira-report-db";
+  var DB_VERSION = 1;
+  var STORE_NAME = "file-handles";
+  function openDatabase() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      };
+    });
+  }
+  async function saveFileHandle(handle) {
+    if (!handle) return;
+    try {
+      const db = await openDatabase();
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      store.put(handle, "lastFile");
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    } catch (err) {
+      console.warn("Impossible de sauvegarder le file handle:", err);
+    }
+  }
+  async function getStoredFileHandle() {
+    try {
+      const db = await openDatabase();
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.get("lastFile");
+      const handle = await new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      return handle || null;
+    } catch (err) {
+      console.warn("Impossible de r\xE9cup\xE9rer le file handle:", err);
+      return null;
+    }
+  }
+  async function clearStoredFileHandle() {
+    try {
+      const db = await openDatabase();
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      store.delete("lastFile");
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    } catch (err) {
+      console.warn("Impossible de supprimer le file handle:", err);
+    }
+  }
+  async function tryLoadLastFile() {
+    if (!isFileSystemAccessSupported()) {
+      return { success: false };
+    }
+    const handle = await getStoredFileHandle();
+    if (!handle) {
+      return { success: false };
+    }
+    try {
+      const permission = await handle.queryPermission({ mode: "readwrite" });
+      if (permission !== "granted") {
+        const requestResult = await handle.requestPermission({ mode: "readwrite" });
+        if (requestResult !== "granted") {
+          return { success: false };
+        }
+      }
+      const file = await handle.getFile();
+      const text = await file.text();
+      const content = JSON.parse(text);
+      return { success: true, handle, content, filename: file.name };
+    } catch (err) {
+      console.warn("Impossible de recharger le fichier:", err);
+      await clearStoredFileHandle();
+      return { success: false };
+    }
+  }
 
   // js/config.js
   var Config = {
-    // URLs externes
-    urls: {
-      ajir: "https://ajir.axa-fr.intraxa/browse/"
-    },
     // Mapping des priorités JIRA vers l'application
     priorityMap: {
       "Highest": { value: 5, text: "Critique", class: "critical" },
@@ -930,8 +1146,13 @@
     };
   }
   function getStatusInfo(jiraStatus, labels) {
-    if (jiraStatus && Config.statusMap[jiraStatus]) {
-      return Config.statusMap[jiraStatus];
+    if (jiraStatus) {
+      const statusKey = Object.keys(Config.statusMap).find(
+        (k) => k.toLowerCase() === jiraStatus.toLowerCase()
+      );
+      if (statusKey) {
+        return Config.statusMap[statusKey];
+      }
     }
     const labelsLower = labels.map((l) => l.toLowerCase());
     for (const [labelPattern, statusKey] of Object.entries(Config.statusLabels)) {
@@ -942,6 +1163,25 @@
           }
         }
       }
+    }
+    if (jiraStatus) {
+      const statusLower = jiraStatus.toLowerCase();
+      if (statusLower === "done" || statusLower === "closed" || statusLower === "resolved") {
+        return { key: "done", label: jiraStatus, icon: "\u2713", cssClass: "status-done" };
+      }
+      if (statusLower.includes("progress") || statusLower.includes("cours") || statusLower.includes("d\xE9velopp") || statusLower.includes("termin\xE9")) {
+        return { key: "inprogress", label: jiraStatus, icon: "\u23F3", cssClass: "status-inprogress" };
+      }
+      if (statusLower.includes("review") || statusLower.includes("revue")) {
+        return { key: "review", label: jiraStatus, icon: "\u{1F440}", cssClass: "status-review" };
+      }
+      if (statusLower.includes("livr") || statusLower.includes("deliver")) {
+        return { key: "delivered", label: jiraStatus, icon: "\u{1F4E6}", cssClass: "status-delivered" };
+      }
+      if (statusLower.includes("pr\xEAt") || statusLower.includes("ready") || statusLower.includes("test")) {
+        return { key: "ready", label: jiraStatus, icon: "\u{1F680}", cssClass: "status-ready" };
+      }
+      return { key: "backlog", label: jiraStatus, icon: "\u{1F4CB}", cssClass: "status-backlog" };
     }
     return Config.defaultStatus;
   }
@@ -1009,6 +1249,59 @@
       this._autoSaveEnabled = false;
       this._autoSaveInterval = null;
       this._lastSaveTime = null;
+      this._liveSaveEnabled = false;
+      this._liveSaveTimeout = null;
+      this._liveSaveDelay = 1500;
+    }
+    /**
+     * Active le live save (sauvegarde automatique après chaque modification)
+     */
+    enableLiveSave() {
+      if (this._liveSaveEnabled) return;
+      this._liveSaveEnabled = true;
+      State.subscribe("unsavedChanges", () => {
+        if (State.hasUnsavedChanges && State.currentFileHandle && this._liveSaveEnabled) {
+          this._scheduleLiveSave();
+        }
+      });
+      console.log("Live save activ\xE9");
+    }
+    /**
+     * Désactive le live save
+     */
+    disableLiveSave() {
+      this._liveSaveEnabled = false;
+      if (this._liveSaveTimeout) {
+        clearTimeout(this._liveSaveTimeout);
+        this._liveSaveTimeout = null;
+      }
+    }
+    /**
+     * Programme une sauvegarde live (debounced)
+     */
+    _scheduleLiveSave() {
+      if (this._liveSaveTimeout) {
+        clearTimeout(this._liveSaveTimeout);
+      }
+      this._liveSaveTimeout = setTimeout(async () => {
+        if (State.hasUnsavedChanges && State.currentFileHandle) {
+          try {
+            const data = State.toJSON();
+            await saveToHandle(State.currentFileHandle, data);
+            State.setUnsavedChanges(false);
+            this._lastSaveTime = /* @__PURE__ */ new Date();
+            console.log("Live save effectu\xE9");
+          } catch (err) {
+            console.warn("Erreur live save:", err);
+          }
+        }
+      }, this._liveSaveDelay);
+    }
+    /**
+     * Retourne si le live save est actif
+     */
+    get isLiveSaveEnabled() {
+      return this._liveSaveEnabled;
     }
     /**
      * Applique les règles de détection de projet aux tickets
@@ -1023,6 +1316,20 @@
         }
         return ticket;
       });
+    }
+    /**
+     * Rafraîchit les tickets en réappliquant les règles de projet
+     * @returns {object} Résultat du rafraîchissement
+     */
+    refreshProjectDetection() {
+      const currentTasks = State.tasks;
+      if (currentTasks.length === 0) {
+        return { success: false, message: "Aucun ticket \xE0 rafra\xEEchir" };
+      }
+      const updatedTasks = this._applyProjectRules(currentTasks);
+      State.setTasks(updatedTasks);
+      State.markAsModified();
+      return { success: true, message: `${updatedTasks.length} tickets mis \xE0 jour` };
     }
     /**
      * Vérifie si le File System Access API est supporté
@@ -1043,6 +1350,7 @@
         State.fromJSON(content);
         if (handle) {
           State.setCurrentFileHandle(handle);
+          await saveFileHandle(handle);
         }
         return {
           success: true,
@@ -1054,6 +1362,33 @@
           return { success: false, cancelled: true };
         }
         throw err;
+      }
+    }
+    /**
+     * Tente de recharger le dernier fichier ouvert
+     * @returns {Promise<object>} Résultat du chargement
+     */
+    async tryLoadLastProject() {
+      try {
+        const result = await tryLoadLastFile();
+        if (!result.success) {
+          return { success: false };
+        }
+        if (!result.content || !result.content.tasks) {
+          return { success: false, message: "Format de fichier invalide" };
+        }
+        State.fromJSON(result.content);
+        if (result.handle) {
+          State.setCurrentFileHandle(result.handle);
+        }
+        return {
+          success: true,
+          message: `Fichier recharg\xE9: ${result.filename || "projet.json"}`,
+          taskCount: result.content.tasks.length
+        };
+      } catch (err) {
+        console.warn("Erreur lors du rechargement automatique:", err);
+        return { success: false };
       }
     }
     /**
@@ -1166,6 +1501,7 @@
         const handle = await saveAsJsonFile(data, filename);
         if (handle) {
           State.setCurrentFileHandle(handle);
+          await saveFileHandle(handle);
         }
         State.setUnsavedChanges(false);
         this._lastSaveTime = /* @__PURE__ */ new Date();
@@ -1363,7 +1699,8 @@
         return;
       }
       this.render();
-      this._attachEventListeners();
+      this._attachDelegatedListeners();
+      this._attachButtonListeners();
       this._subscribeToState();
     }
     /**
@@ -1378,39 +1715,8 @@
       setHtml(this._element, `
       <h2 class="sidebar-title">Filtres</h2>
 
-      <!-- Boutons d'action fichiers -->
-      <div class="file-actions">
-        <button id="btn-open" class="action-btn action-btn-secondary" title="Ouvrir un projet (Ctrl+O)">
-          <span class="btn-icon">\u{1F4C2}</span> Ouvrir
-        </button>
-        <button id="btn-save" class="action-btn action-btn-primary" title="Sauvegarder (Ctrl+S)">
-          <span class="btn-icon">\u{1F4BE}</span> Sauvegarder
-        </button>
-      </div>
-
-      <div class="file-actions">
-        <button id="btn-import-xml" class="action-btn action-btn-import" title="Importer un fichier XML JIRA">
-          <span class="btn-icon">\u{1F4E5}</span> Import XML
-        </button>
-        <button id="btn-backup" class="action-btn action-btn-secondary" title="T\xE9l\xE9charger un backup">
-          <span class="btn-icon">\u2B07\uFE0F</span> Backup
-        </button>
-      </div>
-
-      <div class="file-actions">
-        <button id="btn-config" class="action-btn action-btn-secondary" title="Configuration (Ctrl+,)">
-          <span class="btn-icon">\u2699\uFE0F</span> Configuration
-        </button>
-      </div>
-
-      <!-- Boutons rapport -->
-      <div class="report-buttons-container">
-        <button id="btn-report-text" class="generate-report-btn">\u{1F4DD} Texte</button>
-        <button id="btn-report-html" class="generate-html-report-btn">\u{1F310} HTML</button>
-      </div>
-
       <!-- Reset -->
-      <button id="btn-reset-filters" class="reset-filters-btn">\u{1F504} R\xE9initialiser les filtres</button>
+      <button id="btn-reset-filters" class="reset-filters-btn">R\xE9initialiser</button>
 
       <!-- Recherche -->
       <div class="filter-group search-filter-group">
@@ -1465,22 +1771,26 @@
         </div>
       </div>
     `);
-      this._searchInput = $("#search-input", this._element);
-      if (State.filters.search) {
-        this._searchInput.value = State.filters.search;
-        $("#clear-search", this._element).classList.remove("hidden");
-      }
     }
     /**
      * Génère le HTML des filtres de projets
+     * N'affiche que les projets déclarés dans la config
      */
     _renderProjectFilters(projectCounts) {
-      return Array.from(projectCounts.entries()).filter(([, count]) => count > 0).sort((a, b) => a[0].localeCompare(b[0])).map(([project, count]) => `
-        <button class="filter-btn ${State.filters.project === project ? "active" : ""}"
-                data-filter="${project}">
-          ${project} <span class="tag-count">${count}</span>
-        </button>
-      `).join("");
+      const declaredProjects = UserConfig.projectRules;
+      if (declaredProjects.length === 0) {
+        return '<span class="no-filters">Aucun projet d\xE9clar\xE9</span>';
+      }
+      return declaredProjects.sort((a, b) => a.name.localeCompare(b.name)).map((rule) => {
+        const projectName = rule.name.toLowerCase();
+        const count = projectCounts.get(projectName) || 0;
+        return `
+          <button class="filter-btn ${State.filters.project === projectName ? "active" : ""}"
+                  data-filter="${projectName}">
+            ${rule.name} <span class="tag-count">${count}</span>
+          </button>
+        `;
+      }).join("");
     }
     /**
      * Génère le HTML des filtres de personnes
@@ -1514,51 +1824,35 @@
       `).join("");
     }
     /**
-     * Attache les écouteurs d'événements
+     * Attache les écouteurs délégués (une seule fois)
+     * Ces listeners utilisent la délégation d'événements et ne doivent pas être dupliqués
      */
-    _attachEventListeners() {
+    _attachDelegatedListeners() {
       delegate(this._element, "click", ".filter-btn", (e, btn) => {
         this._handleFilterClick(btn);
       });
-      const searchInput = $("#search-input", this._element);
-      if (searchInput) {
-        searchInput.addEventListener("input", debounce((e) => {
-          this._handleSearch(e.target.value);
-        }, 300));
-        searchInput.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") {
-            this._clearSearch();
-          }
-        });
-      }
-      const clearBtn = $("#clear-search", this._element);
-      if (clearBtn) {
-        clearBtn.addEventListener("click", () => this._clearSearch());
-      }
-      const resetBtn = $("#btn-reset-filters", this._element);
-      if (resetBtn) {
-        resetBtn.addEventListener("click", () => {
-          State.resetFilters();
-          this.render();
-        });
-      }
-      this._attachActionButton("btn-open", "app:open");
-      this._attachActionButton("btn-save", "app:save");
-      this._attachActionButton("btn-import-xml", "app:import-xml");
-      this._attachActionButton("btn-backup", "app:backup");
-      this._attachActionButton("btn-report-text", "app:report-text");
-      this._attachActionButton("btn-report-html", "app:report-html");
-      this._attachActionButton("btn-config", "app:config");
+      delegate(this._element, "input", "#search-input", debounce((e) => {
+        this._handleSearch(e.target.value);
+      }, 300));
+      delegate(this._element, "keydown", "#search-input", (e) => {
+        if (e.key === "Escape") {
+          this._clearSearch();
+        }
+      });
+      delegate(this._element, "click", "#clear-search", () => this._clearSearch());
+      delegate(this._element, "click", "#btn-reset-filters", () => {
+        State.resetFilters();
+        this.render();
+      });
     }
     /**
-     * Attache un bouton à un événement personnalisé
+     * Attache les écouteurs sur les boutons (après chaque render si nécessaire)
      */
-    _attachActionButton(id, eventName) {
-      const btn = $(`#${id}`, this._element);
-      if (btn) {
-        btn.addEventListener("click", () => {
-          document.dispatchEvent(new CustomEvent(eventName));
-        });
+    _attachButtonListeners() {
+      this._searchInput = $("#search-input", this._element);
+      if (State.filters.search && this._searchInput) {
+        this._searchInput.value = State.filters.search;
+        $("#clear-search", this._element)?.classList.remove("hidden");
       }
     }
     /**
@@ -1668,9 +1962,14 @@
     _subscribeToState() {
       const unsubTasks = State.subscribe("tasks", () => {
         this.render();
-        this._attachEventListeners();
+        this._attachButtonListeners();
       });
       this._unsubscribers.push(unsubTasks);
+      const unsubConfig = State.subscribe("userConfig", () => {
+        this.render();
+        this._attachButtonListeners();
+      });
+      this._unsubscribers.push(unsubConfig);
     }
     /**
      * Met à jour l'affichage du nombre de résultats
@@ -1812,7 +2111,7 @@
         const tooltipDate = formatDateShort(new Date(task.dueDate));
         const tooltipText = escapeAttr(`${task.summary} - ${tooltipDate}`);
         const truncatedTitle = task.summary.length > 50 ? task.summary.substring(0, 50) + "..." : task.summary;
-        const url = task.key ? `${Config.urls.ajir}${task.key}` : "#";
+        const url = task.link || "#";
         html += `
         <a href="${url}" target="_blank"
            class="timeline-task ${dueClass} ${doneClass}"
@@ -1912,63 +2211,22 @@
   var TaskTableComponent = class {
     constructor() {
       this._element = null;
-      this._viewModeElement = null;
       this._unsubscribers = [];
       this._sortState = {};
     }
     /**
      * Initialise le composant
      * @param {string} containerSelector - Sélecteur du conteneur des tables
-     * @param {string} viewModeSelector - Sélecteur du sélecteur de vue
      */
-    init(containerSelector, viewModeSelector) {
+    init(containerSelector) {
       this._element = $(containerSelector);
-      this._viewModeElement = $(viewModeSelector);
       if (!this._element) {
         console.error("Task table container not found:", containerSelector);
         return;
       }
-      this._renderViewModeSelector();
       this.render();
       this._attachEventListeners();
       this._subscribeToState();
-    }
-    /**
-     * Rend le sélecteur de mode de vue
-     */
-    _renderViewModeSelector() {
-      if (!this._viewModeElement) return;
-      const viewMode = State.viewMode;
-      setHtml(this._viewModeElement, `
-      <div class="view-mode">
-        <button id="view-by-project" class="view-mode-btn ${viewMode === "project" ? "active" : ""}">
-          Par projet
-        </button>
-        <button id="view-by-date" class="view-mode-btn ${viewMode === "date" ? "active" : ""}">
-          Par date d'\xE9ch\xE9ance
-        </button>
-      </div>
-    `);
-      const projectBtn = $("#view-by-project", this._viewModeElement);
-      const dateBtn = $("#view-by-date", this._viewModeElement);
-      projectBtn?.addEventListener("click", () => {
-        State.setViewMode("project");
-        this._updateViewModeButtons();
-      });
-      dateBtn?.addEventListener("click", () => {
-        State.setViewMode("date");
-        this._updateViewModeButtons();
-      });
-    }
-    /**
-     * Met à jour les boutons de mode de vue
-     */
-    _updateViewModeButtons() {
-      const projectBtn = $("#view-by-project", this._viewModeElement);
-      const dateBtn = $("#view-by-date", this._viewModeElement);
-      const viewMode = State.viewMode;
-      projectBtn?.classList.toggle("active", viewMode === "project");
-      dateBtn?.classList.toggle("active", viewMode === "date");
     }
     /**
      * Rend les tables selon le mode de vue
@@ -2035,13 +2293,14 @@
       <table class="tasks-table" data-sortable="true" data-table-id="${tableId}">
         <thead>
           <tr>
+            <th class="col-key" data-sort="key">Cl\xE9<span class="sort-indicator"></span></th>
             <th class="col-title" data-sort="title">Titre<span class="sort-indicator"></span></th>
             <th class="col-project" data-sort="project">Projet<span class="sort-indicator"></span></th>
             <th class="col-status" data-sort="status">Statut<span class="sort-indicator"></span></th>
             <th class="col-due ${dueSortClass}" data-sort="due">\xC9ch\xE9ance<span class="sort-indicator"></span></th>
             <th class="col-labels">Labels</th>
             <th class="col-priority" data-sort="priority">Priorit\xE9<span class="sort-indicator"></span></th>
-            <th class="col-link">Lien</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -2051,34 +2310,70 @@
     `;
     }
     /**
+     * Récupère les infos de statut depuis Config.statusMap (case-insensitive)
+     * Si pas trouvé, retourne un objet avec le statut brut
+     */
+    _getStatusInfo(status) {
+      if (!status) return Config.defaultStatus;
+      const key = Object.keys(Config.statusMap).find((k) => k.toLowerCase() === status.toLowerCase());
+      if (key) {
+        return Config.statusMap[key];
+      }
+      const statusLower = status.toLowerCase();
+      if (statusLower === "done" || statusLower === "closed" || statusLower === "resolved") {
+        return { key: "done", label: status, icon: "\u2713", cssClass: "status-done" };
+      }
+      if (statusLower.includes("progress") || statusLower.includes("cours") || statusLower.includes("d\xE9velopp") || statusLower.includes("termin\xE9")) {
+        return { key: "inprogress", label: status, icon: "\u23F3", cssClass: "status-inprogress" };
+      }
+      if (statusLower.includes("review") || statusLower.includes("revue")) {
+        return { key: "review", label: status, icon: "\u{1F440}", cssClass: "status-review" };
+      }
+      if (statusLower.includes("livr") || statusLower.includes("deliver")) {
+        return { key: "delivered", label: status, icon: "\u{1F4E6}", cssClass: "status-delivered" };
+      }
+      if (statusLower.includes("pr\xEAt") || statusLower.includes("ready") || statusLower.includes("test")) {
+        return { key: "ready", label: status, icon: "\u{1F680}", cssClass: "status-ready" };
+      }
+      return { key: "backlog", label: status, icon: "\u{1F4CB}", cssClass: "status-backlog" };
+    }
+    /**
      * Génère le HTML d'une ligne de tâche
      */
     _renderTaskRow(task) {
-      const isDone = task.statusKey === "done";
+      const statusInfo = this._getStatusInfo(task.status);
+      const statusKey = statusInfo.key;
+      const isManualDone = task.done === true;
+      const isStatusDone = statusKey === "done";
       const hasLabelDone = (task.labels || []).some((l) => l.toLowerCase() === "done");
-      const rowClass = isDone ? "task-done" : hasLabelDone ? "task-label-done" : "";
+      const rowClass = isManualDone ? "task-manual-done" : isStatusDone ? "task-done" : hasLabelDone ? "task-label-done" : "";
       const dueDate = formatDate(task.dueDate);
       const dueClass = getDueClass(task.dueDate);
-      const statusIcon = task.statusIcon || "\u{1F4CB}";
-      const statusLabel = task.statusLabel || "Backlog";
-      const statusCss = task.statusCssClass || "status-backlog";
+      const statusIcon = statusInfo.icon;
+      const statusLabel = statusInfo.label;
+      const statusCss = statusInfo.cssClass;
       const priorityText = task.priorityText || "-";
       const priorityCss = task.priorityCssClass || "";
       const labels = (task.labels || []).map((l) => this._formatLabel(l)).join("");
-      const ajirUrl = task.key ? `${Config.urls.ajir}${task.key}` : null;
+      const jiraUrl = task.link || null;
+      const taskKey = task.key || "";
       return `
       <tr class="${rowClass}"
-          data-key="${escapeAttr(task.key || "")}"
+          data-key="${escapeAttr(taskKey)}"
           data-title="${escapeAttr(task.summary || "")}"
           data-due="${task.dueDate || ""}"
           data-priority="${task.priorityCssClass || ""}"
           data-person="${escapeAttr(task.reporter || "")}"
           data-project="${escapeAttr(task.project || "")}"
-          data-status="${task.statusKey || "backlog"}">
+          data-status="${statusKey}">
+        <td class="task-key">
+          ${jiraUrl ? `<a href="${jiraUrl}" target="_blank" class="task-key-link">${escapeAttr(taskKey)}</a>` : escapeAttr(taskKey)}
+        </td>
         <td class="task-title">
           ${escapeAttr(task.summary || "")}
-          ${isDone ? '<span class="task-done-badge">\u2713 Termin\xE9</span>' : ""}
-          ${!isDone && hasLabelDone ? '<span class="task-label-done-badge">\u2713 Termin\xE9</span>' : ""}
+          ${isManualDone ? '<span class="task-manual-done-badge">\u2713 Termin\xE9</span>' : ""}
+          ${!isManualDone && isStatusDone ? '<span class="task-done-badge">\u2713 Termin\xE9</span>' : ""}
+          ${!isManualDone && !isStatusDone && hasLabelDone ? '<span class="task-label-done-badge">\u2713 Termin\xE9</span>' : ""}
         </td>
         <td class="task-project">${escapeAttr(task.project || "")}</td>
         <td class="task-status">
@@ -2087,8 +2382,11 @@
         <td class="task-due ${dueClass}">${dueDate}</td>
         <td><div class="task-labels">${labels}</div></td>
         <td class="priority ${priorityCss}">${priorityText}</td>
-        <td class="task-link">
-          ${ajirUrl ? `<a href="${ajirUrl}" target="_blank">ajir</a>` : ""}
+        <td class="task-actions">
+          <button class="action-btn action-done ${task.done ? "is-done" : ""}" data-action="done" data-key="${escapeAttr(taskKey)}" title="${task.done ? "Marquer non termin\xE9" : "Marquer termin\xE9"}">${task.done ? "\u21A9" : "\u2713"}</button>
+          <button class="action-btn action-edit" data-action="edit" data-key="${escapeAttr(taskKey)}" title="Modifier">\u270F\uFE0F</button>
+          <button class="action-btn action-ban" data-action="ban" data-key="${escapeAttr(taskKey)}" title="Bloquer">\u{1F6AB}</button>
+          <button class="action-btn action-delete" data-action="delete" data-key="${escapeAttr(taskKey)}" title="Supprimer">\u{1F5D1}\uFE0F</button>
         </td>
       </tr>
     `;
@@ -2110,6 +2408,60 @@
       delegate(this._element, "click", "th[data-sort]", (e, th) => {
         this._handleSort(th);
       });
+      delegate(this._element, "dblclick", "tr[data-key]", (e, row) => {
+        const taskKey = row.dataset.key;
+        if (taskKey) {
+          document.dispatchEvent(new CustomEvent("app:edit-task", {
+            detail: { taskKey }
+          }));
+        }
+      });
+      delegate(this._element, "click", ".action-btn", (e, btn) => {
+        e.stopPropagation();
+        const action = btn.dataset.action;
+        const key = btn.dataset.key;
+        switch (action) {
+          case "done":
+            this._handleToggleDone(key);
+            break;
+          case "edit":
+            document.dispatchEvent(new CustomEvent("app:edit-task", {
+              detail: { taskKey: key }
+            }));
+            break;
+          case "ban":
+            this._handleBan(key);
+            break;
+          case "delete":
+            this._handleDelete(key);
+            break;
+        }
+      });
+    }
+    /**
+     * Gère le marquage terminé/non terminé d'un ticket
+     */
+    _handleToggleDone(key) {
+      const task = State.tasks.find((t) => t.key === key);
+      if (task) {
+        State.updateTask(key, { done: !task.done });
+      }
+    }
+    /**
+     * Gère le blocage d'un ticket
+     */
+    _handleBan(key) {
+      if (confirm(`Bloquer le ticket ${key} ? Il sera masqu\xE9 de l'affichage.`)) {
+        UserConfig.addToBlacklist(key);
+      }
+    }
+    /**
+     * Gère la suppression d'un ticket
+     */
+    _handleDelete(key) {
+      if (confirm(`Supprimer d\xE9finitivement le ticket ${key} ?`)) {
+        State.removeTask(key);
+      }
     }
     /**
      * Gère le tri d'une colonne
@@ -2138,6 +2490,10 @@
       rows.sort((a, b) => {
         let valA, valB;
         switch (sortKey) {
+          case "key":
+            valA = a.dataset.key || "";
+            valB = b.dataset.key || "";
+            break;
           case "title":
             valA = a.dataset.title || "";
             valB = b.dataset.title || "";
@@ -2184,7 +2540,8 @@
       const unsubTasks = State.subscribe("tasks", () => this.render());
       const unsubFilters = State.subscribe("filters", () => this.render());
       const unsubViewMode = State.subscribe("viewMode", () => this.render());
-      this._unsubscribers.push(unsubTasks, unsubFilters, unsubViewMode);
+      const unsubConfig = State.subscribe("userConfig", () => this.render());
+      this._unsubscribers.push(unsubTasks, unsubFilters, unsubViewMode, unsubConfig);
     }
     /**
      * Nettoie le composant
@@ -2213,32 +2570,128 @@
         return;
       }
       this.render();
+      this._attachEventListeners();
       this._subscribeToState();
     }
     /**
-     * Rend les statistiques
+     * Rend la barre
      */
     render() {
       const stats = State.getStats();
-      const now = /* @__PURE__ */ new Date();
+      const viewMode = State.viewMode;
       setHtml(this._element, `
-      <div class="stat-item">
-        <div class="stat-value" id="total-tasks">${stats.totalTasks}</div>
-        <div class="stat-label">T\xE2ches</div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-title">Statistiques</span>
+        <div class="ribbon-group-content">
+          <span class="stats-info"><strong>${stats.totalTasks}</strong> t\xE2ches</span>
+          <span class="stats-info"><strong>${stats.totalProjects}</strong> projets</span>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="stat-value" id="total-projects">${stats.totalProjects}</div>
-        <div class="stat-label">Projets</div>
+
+      <span class="stats-sep"></span>
+
+      <div class="ribbon-group">
+        <span class="ribbon-group-title">Fichier</span>
+        <div class="ribbon-group-content">
+          <button id="btn-open" class="stats-btn" title="Ouvrir (Ctrl+O)">
+            <span class="btn-icon">\u{1F4C2}</span><span class="btn-label">Ouvrir</span>
+          </button>
+          <button id="btn-save" class="stats-btn stats-btn-primary" title="Sauvegarder (Ctrl+S)">
+            <span class="btn-icon">\u{1F4BE}</span><span class="btn-label">Sauver</span>
+          </button>
+          <button id="btn-import-xml" class="stats-btn" title="Import XML (Ctrl+I)">
+            <span class="btn-icon">\u{1F4E5}</span><span class="btn-label">Import</span>
+          </button>
+          <button id="btn-backup" class="stats-btn" title="T\xE9l\xE9charger backup">
+            <span class="btn-icon">\u2B07\uFE0F</span><span class="btn-label">Backup</span>
+          </button>
+          <button id="btn-clear" class="stats-btn stats-btn-danger" title="Effacer tous les tickets">
+            <span class="btn-icon">\u{1F5D1}\uFE0F</span><span class="btn-label">Clear</span>
+          </button>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="stat-value" id="generated-date">${now.toLocaleDateString("fr-FR")}</div>
-        <div class="stat-label">Date</div>
+
+      <span class="stats-sep"></span>
+
+      <div class="ribbon-group">
+        <span class="ribbon-group-title">Affichage</span>
+        <div class="ribbon-group-content">
+          <button id="view-by-project" class="stats-btn stats-btn-toggle ${viewMode === "project" ? "active" : ""}" title="Vue par projet">
+            <span class="btn-icon">\u{1F4C1}</span><span class="btn-label">Projet</span>
+          </button>
+          <button id="view-by-date" class="stats-btn stats-btn-toggle ${viewMode === "date" ? "active" : ""}" title="Vue par date">
+            <span class="btn-icon">\u{1F4C5}</span><span class="btn-label">Date</span>
+          </button>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="stat-value" id="generated-time">${now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
-        <div class="stat-label">Heure</div>
+
+      <span class="stats-sep"></span>
+
+      <div class="ribbon-group">
+        <span class="ribbon-group-title">Rapport</span>
+        <div class="ribbon-group-content">
+          <button id="btn-report-text" class="stats-btn" title="Rapport texte">
+            <span class="btn-icon">\u{1F4DD}</span><span class="btn-label">Texte</span>
+          </button>
+          <button id="btn-report-html" class="stats-btn" title="Rapport HTML">
+            <span class="btn-icon">\u{1F310}</span><span class="btn-label">HTML</span>
+          </button>
+        </div>
       </div>
+
+      <span class="stats-spacer"></span>
+
+      <button id="btn-config" class="stats-btn" title="Configuration (Ctrl+,)">
+        <span class="btn-icon">\u2699\uFE0F</span><span class="btn-label">Config</span>
+      </button>
     `);
+    }
+    /**
+     * Attache les écouteurs d'événements
+     */
+    _attachEventListeners() {
+      delegate(this._element, "click", "#btn-open", () => {
+        document.dispatchEvent(new CustomEvent("app:open"));
+      });
+      delegate(this._element, "click", "#btn-save", () => {
+        document.dispatchEvent(new CustomEvent("app:save"));
+      });
+      delegate(this._element, "click", "#btn-import-xml", () => {
+        document.dispatchEvent(new CustomEvent("app:import-xml"));
+      });
+      delegate(this._element, "click", "#btn-backup", () => {
+        document.dispatchEvent(new CustomEvent("app:backup"));
+      });
+      delegate(this._element, "click", "#btn-clear", () => {
+        document.dispatchEvent(new CustomEvent("app:clear"));
+      });
+      delegate(this._element, "click", "#btn-report-text", () => {
+        document.dispatchEvent(new CustomEvent("app:report-text"));
+      });
+      delegate(this._element, "click", "#btn-report-html", () => {
+        document.dispatchEvent(new CustomEvent("app:report-html"));
+      });
+      delegate(this._element, "click", "#btn-config", () => {
+        document.dispatchEvent(new CustomEvent("app:config"));
+      });
+      delegate(this._element, "click", "#view-by-project", () => {
+        State.setViewMode("project");
+        this._updateViewModeButtons();
+      });
+      delegate(this._element, "click", "#view-by-date", () => {
+        State.setViewMode("date");
+        this._updateViewModeButtons();
+      });
+    }
+    /**
+     * Met à jour les boutons de vue
+     */
+    _updateViewModeButtons() {
+      const projectBtn = $("#view-by-project", this._element);
+      const dateBtn = $("#view-by-date", this._element);
+      const viewMode = State.viewMode;
+      projectBtn?.classList.toggle("active", viewMode === "project");
+      dateBtn?.classList.toggle("active", viewMode === "date");
     }
     /**
      * S'abonne aux changements d'état
@@ -2282,7 +2735,7 @@
      */
     _render() {
       setHtml(this._element, `
-      <div class="modal-content modal-content-large">
+      <div class="modal-content modal-content-large modal-import">
         <div class="modal-header">
           <h2>Import JIRA XML</h2>
           <button id="close-import-modal" class="close-modal-btn">\u2715</button>
@@ -2293,34 +2746,63 @@
             <p class="jira-import-hint">Export depuis JIRA : Filtres \u2192 Exporter \u2192 XML</p>
           </div>
 
-          <div id="import-dropzone" class="jira-dropzone">
-            <div class="jira-dropzone-content">
-              <span class="jira-dropzone-icon">\u{1F4C4}</span>
-              <span class="jira-dropzone-text">Glissez un fichier XML ici</span>
-              <span class="jira-dropzone-or">ou</span>
-              <label class="jira-file-btn">
-                \u{1F4C1} Parcourir
-                <input type="file" id="import-file-input" accept=".xml,text/xml,application/xml" class="hidden">
-              </label>
+          <div class="jira-input-row">
+            <div id="import-dropzone" class="jira-dropzone">
+              <div class="jira-dropzone-content">
+                <span class="jira-dropzone-icon">\u{1F4C4}</span>
+                <label class="jira-file-btn">
+                  \u{1F4C1} Parcourir
+                  <input type="file" id="import-file-input" accept=".xml,text/xml,application/xml" class="hidden">
+                </label>
+              </div>
             </div>
-          </div>
 
-          <textarea id="import-xml-input" class="jira-xml-input"
-                    placeholder="...ou collez le XML JIRA ici"></textarea>
+            <textarea id="import-xml-input" class="jira-xml-input"
+                      placeholder="...ou collez le XML JIRA ici"></textarea>
+          </div>
 
           <div class="jira-import-actions">
             <button id="btn-analyze-xml" class="analyze-jira-btn">\u{1F50D} Analyser</button>
             <span id="import-status" class="jira-analyze-status"></span>
+            <div id="import-stats" class="jira-import-stats hidden"></div>
           </div>
 
           <div id="import-results" class="jira-import-results hidden"></div>
-
-          <div id="import-actions-final" class="import-actions-final hidden">
+        </div>
+        <div id="import-actions-final" class="modal-footer import-actions-final hidden">
+          <div class="import-actions-row">
             <button id="btn-import-add" class="action-btn action-btn-primary">
-              \u2795 Ajouter les nouveaux tickets
+              \u2795 Ajouter les nouveaux
+            </button>
+            <button id="btn-import-update" class="action-btn action-btn-import">
+              \u{1F504} Mettre \xE0 jour les existants
             </button>
             <button id="btn-import-replace" class="action-btn action-btn-secondary">
-              \u{1F504} Remplacer tout
+              \u26A0\uFE0F Tout remplacer
+            </button>
+          </div>
+          <div id="import-update-options" class="import-update-options hidden">
+            <div class="update-fields-section">
+              <span class="update-options-label">Champs \xE0 mettre \xE0 jour :</span>
+              <div class="update-options-checkboxes">
+                <label><input type="checkbox" id="update-summary" checked> Titre</label>
+                <label><input type="checkbox" id="update-status" checked> Statut</label>
+                <label><input type="checkbox" id="update-priority" checked> Priorit\xE9</label>
+                <label><input type="checkbox" id="update-duedate" checked> \xC9ch\xE9ance</label>
+                <label><input type="checkbox" id="update-labels"> Labels</label>
+                <label><input type="checkbox" id="update-project"> Projet</label>
+                <label><input type="checkbox" id="update-assignee"> Assign\xE9</label>
+              </div>
+            </div>
+            <div class="update-tickets-section">
+              <div class="update-tickets-header">
+                <span class="update-options-label">Tickets \xE0 mettre \xE0 jour :</span>
+                <label class="select-all-label"><input type="checkbox" id="update-select-all" checked> Tout s\xE9lectionner</label>
+              </div>
+              <div id="update-tickets-list" class="update-tickets-list"></div>
+            </div>
+            <button id="btn-confirm-update" class="action-btn action-btn-primary">
+              \u2713 Confirmer la mise \xE0 jour
             </button>
           </div>
         </div>
@@ -2368,8 +2850,55 @@
       analyzeBtn?.addEventListener("click", () => this._analyze());
       const addBtn = $("#btn-import-add", this._element);
       addBtn?.addEventListener("click", () => this._importAdd());
+      const updateBtn = $("#btn-import-update", this._element);
+      updateBtn?.addEventListener("click", () => this._showUpdateOptions());
+      const confirmUpdateBtn = $("#btn-confirm-update", this._element);
+      confirmUpdateBtn?.addEventListener("click", () => this._importUpdate());
       const replaceBtn = $("#btn-import-replace", this._element);
       replaceBtn?.addEventListener("click", () => this._importReplace());
+    }
+    /**
+     * Affiche les options de mise à jour
+     */
+    _showUpdateOptions() {
+      const optionsEl = $("#import-update-options", this._element);
+      if (optionsEl) {
+        const isHidden = optionsEl.classList.contains("hidden");
+        optionsEl.classList.toggle("hidden");
+        if (isHidden) {
+          this._renderUpdateTicketsList();
+        }
+      }
+    }
+    /**
+     * Rend la liste des tickets à mettre à jour
+     */
+    _renderUpdateTicketsList() {
+      const listEl = $("#update-tickets-list", this._element);
+      if (!listEl || !this._parsedTickets) return;
+      const existingTickets = this._parsedTickets.filter(
+        (ticket) => State.tasks.some((t) => t.key.toUpperCase() === ticket.key.toUpperCase())
+      );
+      if (existingTickets.length === 0) {
+        setHtml(listEl, '<span class="no-tickets">Aucun ticket existant \xE0 mettre \xE0 jour</span>');
+        return;
+      }
+      const html = existingTickets.map((ticket) => `
+      <label class="update-ticket-item">
+        <input type="checkbox" class="update-ticket-checkbox" data-key="${escapeAttr(ticket.key)}" checked>
+        <span class="update-ticket-key">${escapeAttr(ticket.key)}</span>
+        <span class="update-ticket-summary">${escapeAttr(ticket.summary || "")}</span>
+      </label>
+    `).join("");
+      setHtml(listEl, html);
+      const selectAllEl = $("#update-select-all", this._element);
+      if (selectAllEl) {
+        selectAllEl.checked = true;
+        selectAllEl.onchange = () => {
+          const checkboxes = $$(".update-ticket-checkbox", this._element);
+          checkboxes.forEach((cb) => cb.checked = selectAllEl.checked);
+        };
+      }
     }
     /**
      * Gère le drop de fichier
@@ -2422,25 +2951,25 @@
      * Affiche les résultats de l'analyse
      */
     _displayResults(results) {
+      const statsEl = $("#import-stats", this._element);
       const resultsEl = $("#import-results", this._element);
       const actionsEl = $("#import-actions-final", this._element);
+      if (statsEl) {
+        setHtml(statsEl, `
+        <span class="jira-stat-inline jira-stat-total">
+          <strong>${results.total}</strong> tickets
+        </span>
+        <span class="jira-stat-inline jira-stat-new">
+          <strong>${results.new.length}</strong> nouveaux
+        </span>
+        <span class="jira-stat-inline jira-stat-existing">
+          <strong>${results.existing.length}</strong> existants
+        </span>
+      `);
+        removeClass(statsEl, "hidden");
+      }
       if (!resultsEl) return;
-      let html = `
-      <div class="jira-results-summary">
-        <div class="jira-stat jira-stat-total">
-          <span class="jira-stat-value">${results.total}</span>
-          <span class="jira-stat-label">Tickets JIRA</span>
-        </div>
-        <div class="jira-stat jira-stat-new">
-          <span class="jira-stat-value">${results.new.length}</span>
-          <span class="jira-stat-label">Nouveaux</span>
-        </div>
-        <div class="jira-stat jira-stat-existing">
-          <span class="jira-stat-value">${results.existing.length}</span>
-          <span class="jira-stat-label">D\xE9j\xE0 pr\xE9sents</span>
-        </div>
-      </div>
-    `;
+      let html = "";
       if (results.new.length > 0) {
         html += `
         <div class="jira-results-section">
@@ -2475,10 +3004,10 @@
         <thead>
           <tr>
             <th>Cl\xE9</th>
+            <th>Projet</th>
             <th>R\xE9sum\xE9</th>
             <th>Statut</th>
             <th>Priorit\xE9</th>
-            <th>Assign\xE9</th>
             <th>\xC9ch\xE9ance</th>
           </tr>
         </thead>
@@ -2486,12 +3015,12 @@
           ${tickets.map((t) => `
             <tr class="${isExisting ? "jira-row-existing" : ""}">
               <td>
-                <a href="${Config.urls.ajir}${t.key}" target="_blank">${t.key}</a>
+                <a href="${t.link || "#"}" target="_blank">${t.key}</a>
               </td>
+              <td>${escapeAttr(t.project || "-")}</td>
               <td>${escapeAttr(t.summary || "")}</td>
               <td><span class="jira-status">${t.status || "-"}</span></td>
               <td>${t.priority || "-"}</td>
-              <td>${t.assignee || "-"}</td>
               <td>${t.dueDate ? formatDate(t.dueDate) : "-"}</td>
             </tr>
           `).join("")}
@@ -2503,8 +3032,10 @@
      * Cache les résultats
      */
     _hideResults() {
+      const statsEl = $("#import-stats", this._element);
       const resultsEl = $("#import-results", this._element);
       const actionsEl = $("#import-actions-final", this._element);
+      if (statsEl) addClass(statsEl, "hidden");
       if (resultsEl) addClass(resultsEl, "hidden");
       if (actionsEl) addClass(actionsEl, "hidden");
     }
@@ -2526,6 +3057,77 @@
       } else {
         this._setStatus("\u274C " + (result.message || "Erreur"), "error");
       }
+    }
+    /**
+     * Import mode: Mettre à jour les existants
+     */
+    _importUpdate() {
+      if (!this._parsedTickets || this._parsedTickets.length === 0) {
+        this._setStatus("\u26A0\uFE0F Aucun ticket \xE0 mettre \xE0 jour", "error");
+        return;
+      }
+      const selectedKeys = /* @__PURE__ */ new Set();
+      $$(".update-ticket-checkbox:checked", this._element).forEach((cb) => {
+        selectedKeys.add(cb.dataset.key.toUpperCase());
+      });
+      if (selectedKeys.size === 0) {
+        this._setStatus("\u26A0\uFE0F Aucun ticket s\xE9lectionn\xE9", "error");
+        return;
+      }
+      const fieldsToUpdate = {
+        summary: $("#update-summary", this._element)?.checked || false,
+        status: $("#update-status", this._element)?.checked || false,
+        priority: $("#update-priority", this._element)?.checked || false,
+        dueDate: $("#update-duedate", this._element)?.checked || false,
+        labels: $("#update-labels", this._element)?.checked || false,
+        project: $("#update-project", this._element)?.checked || false,
+        assignee: $("#update-assignee", this._element)?.checked || false
+      };
+      let updatedCount = 0;
+      this._parsedTickets.forEach((importedTicket) => {
+        const ticketKeyUpper = importedTicket.key.toUpperCase();
+        if (!selectedKeys.has(ticketKeyUpper)) return;
+        const existingTask = State.tasks.find(
+          (t) => t.key.toUpperCase() === ticketKeyUpper
+        );
+        if (existingTask) {
+          const updates = {};
+          if (fieldsToUpdate.summary && importedTicket.summary) {
+            updates.summary = importedTicket.summary;
+          }
+          if (fieldsToUpdate.status && importedTicket.status) {
+            updates.status = importedTicket.status;
+            updates.statusKey = importedTicket.statusKey;
+            updates.statusLabel = importedTicket.statusLabel;
+            updates.statusIcon = importedTicket.statusIcon;
+            updates.statusCssClass = importedTicket.statusCssClass;
+          }
+          if (fieldsToUpdate.priority && importedTicket.priority) {
+            updates.priority = importedTicket.priority;
+            updates.priorityValue = importedTicket.priorityValue;
+            updates.priorityText = importedTicket.priorityText;
+            updates.priorityCssClass = importedTicket.priorityCssClass;
+          }
+          if (fieldsToUpdate.dueDate) {
+            updates.dueDate = importedTicket.dueDate;
+          }
+          if (fieldsToUpdate.labels && importedTicket.labels) {
+            updates.labels = importedTicket.labels;
+          }
+          if (fieldsToUpdate.project && importedTicket.project) {
+            updates.project = importedTicket.project;
+          }
+          if (fieldsToUpdate.assignee) {
+            updates.assignee = importedTicket.assignee;
+          }
+          if (Object.keys(updates).length > 0) {
+            State.updateTask(existingTask.key, updates);
+            updatedCount++;
+          }
+        }
+      });
+      this._setStatus(`\u2713 ${updatedCount} tickets mis \xE0 jour`, "success");
+      setTimeout(() => this.close(), 1500);
     }
     /**
      * Import mode: Remplacer tout
@@ -2594,6 +3196,16 @@
         this.open();
       }
     }
+    /**
+     * Ouvre la modal avec un fichier et lance l'analyse
+     * @param {File} file - Fichier XML à analyser
+     */
+    async openWithFile(file) {
+      this.open();
+      if (file) {
+        await this._handleFileDrop([file]);
+      }
+    }
   };
   var ImportModal = new ImportModalComponent();
 
@@ -2643,7 +3255,7 @@
             <input type="checkbox" id="report-col-projet" checked> Projet
           </label>
           <label class="column-checkbox">
-            <input type="checkbox" id="report-col-ajir" checked> AJIR
+            <input type="checkbox" id="report-col-jira" checked> JIRA
           </label>
         </div>
 
@@ -2670,7 +3282,7 @@
           this.close();
         }
       });
-      ["echeance", "statut", "personne", "projet", "ajir"].forEach((col) => {
+      ["echeance", "statut", "personne", "projet", "jira"].forEach((col) => {
         const checkbox = $(`#report-col-${col}`, this._element);
         checkbox?.addEventListener("change", () => this._refreshReport());
       });
@@ -2752,7 +3364,7 @@
         statut: $("#report-col-statut", this._element)?.checked ?? true,
         personne: $("#report-col-personne", this._element)?.checked ?? true,
         projet: $("#report-col-projet", this._element)?.checked ?? true,
-        ajir: $("#report-col-ajir", this._element)?.checked ?? true
+        jira: $("#report-col-jira", this._element)?.checked ?? true
       };
     }
     /**
@@ -2765,14 +3377,14 @@
       const COL_STATUT = 15;
       const COL_PERSONNE = 15;
       const COL_PROJET = 15;
-      const COL_AJIR = 14;
+      const COL_JIRA = 14;
       const COL_TITRE = 80;
       let totalWidth = COL_TITRE;
       if (options.echeance) totalWidth += COL_ECHEANCE + 3;
       if (options.statut) totalWidth += COL_STATUT + 3;
       if (options.personne) totalWidth += COL_PERSONNE + 3;
       if (options.projet) totalWidth += COL_PROJET + 3;
-      if (options.ajir) totalWidth += COL_AJIR + 3;
+      if (options.jira) totalWidth += COL_JIRA + 3;
       let report = "RAPPORT DES T\xC2CHES - " + (/* @__PURE__ */ new Date()).toLocaleDateString("fr-FR", {
         year: "numeric",
         month: "long",
@@ -2786,7 +3398,7 @@
       if (options.statut) header += "Statut".padEnd(COL_STATUT) + " | ";
       if (options.personne) header += "Rapporteur".padEnd(COL_PERSONNE) + " | ";
       if (options.projet) header += "Projet".padEnd(COL_PROJET) + " | ";
-      if (options.ajir) header += "AJIR".padEnd(COL_AJIR) + " | ";
+      if (options.jira) header += "JIRA".padEnd(COL_JIRA) + " | ";
       header += "Titre";
       report += header + "\n";
       report += "-".repeat(totalWidth) + "\n";
@@ -2811,7 +3423,7 @@
         if (options.statut) row += ((task.statusIcon || "") + " " + (task.statusLabel || "Backlog")).padEnd(COL_STATUT) + " | ";
         if (options.personne) row += (task.reporter || "-").padEnd(COL_PERSONNE) + " | ";
         if (options.projet) row += (task.project || "-").padEnd(COL_PROJET) + " | ";
-        if (options.ajir) row += (task.key || "-").padEnd(COL_AJIR) + " | ";
+        if (options.jira) row += (task.key || "-").padEnd(COL_JIRA) + " | ";
         row += task.summary || "";
         report += row + "\n";
       });
@@ -2847,7 +3459,7 @@
             ${options.statut ? '<th data-sort="status">Statut<span class="sort-indicator"></span></th>' : ""}
             ${options.personne ? '<th data-sort="person">Rapporteur<span class="sort-indicator"></span></th>' : ""}
             ${options.projet ? '<th data-sort="project">Projet<span class="sort-indicator"></span></th>' : ""}
-            ${options.ajir ? '<th data-sort="ajir">AJIR<span class="sort-indicator"></span></th>' : ""}
+            ${options.jira ? '<th data-sort="jira">JIRA<span class="sort-indicator"></span></th>' : ""}
             <th data-sort="title">Titre<span class="sort-indicator"></span></th>
           </tr>
         </thead>
@@ -2858,8 +3470,8 @@
         const rowClass = isDone ? "row-done" : index % 2 === 0 ? "row-even" : "row-odd";
         const statusCss = task.statusCssClass || "status-backlog";
         const titleClass = isDone ? "title-done" : "";
-        const ajirUrl = task.key ? `${Config.urls.ajir}${task.key}` : null;
-        const titleHtml = ajirUrl ? `<a href="${ajirUrl}" target="_blank" class="title-link ${titleClass}">${escapeAttr(task.summary || "")}</a>` : isDone ? `<span class="${titleClass}">${escapeAttr(task.summary || "")}</span>` : escapeAttr(task.summary || "");
+        const jiraUrl = task.link || null;
+        const titleHtml = jiraUrl ? `<a href="${jiraUrl}" target="_blank" class="title-link ${titleClass}">${escapeAttr(task.summary || "")}</a>` : isDone ? `<span class="${titleClass}">${escapeAttr(task.summary || "")}</span>` : escapeAttr(task.summary || "");
         html += `
         <tr class="${rowClass}"
             data-title="${escapeAttr(task.summary || "")}"
@@ -2867,12 +3479,12 @@
             data-status="${task.statusKey || "backlog"}"
             data-person="${escapeAttr(task.reporter || "")}"
             data-project="${escapeAttr(task.project || "")}"
-            data-ajir="${task.key || ""}">
+            data-jira="${task.key || ""}">
           ${options.echeance ? `<td>${formatDate(task.dueDate) || "-"}</td>` : ""}
           ${options.statut ? `<td class="cell-status"><span class="status-badge ${statusCss}">${task.statusIcon || ""} ${task.statusLabel || "Backlog"}</span></td>` : ""}
           ${options.personne ? `<td>${task.reporter || "-"}</td>` : ""}
           ${options.projet ? `<td>${task.project || "-"}</td>` : ""}
-          ${options.ajir ? `<td>${task.key || "-"}</td>` : ""}
+          ${options.jira ? `<td>${task.key || "-"}</td>` : ""}
           <td>${titleHtml}</td>
         </tr>
       `;
@@ -2967,6 +3579,8 @@
                 <button id="btn-add-tag" class="config-add-btn">+ Ajouter</button>
               </div>
 
+              <div id="tag-suggestions" class="config-suggestions"></div>
+
               <div id="custom-tags-list" class="config-items-list"></div>
             </div>
           </div>
@@ -2982,6 +3596,8 @@
                 <input type="text" id="new-project-pattern" placeholder="Mot-cl\xE9 (dans le titre)..." class="config-input">
                 <button id="btn-add-project-rule" class="config-add-btn">+ Ajouter</button>
               </div>
+
+              <div id="project-suggestions" class="config-suggestions"></div>
 
               <div id="project-rules-list" class="config-items-list"></div>
             </div>
@@ -3004,9 +3620,14 @@
         </div>
 
         <div class="modal-footer">
-          <button id="btn-export-config" class="action-btn action-btn-secondary">\u{1F4E4} Exporter</button>
-          <button id="btn-import-config" class="action-btn action-btn-secondary">\u{1F4E5} Importer</button>
-          <button id="btn-reset-config" class="action-btn" style="border-color: var(--color-error); color: var(--color-error);">\u{1F5D1}\uFE0F R\xE9initialiser</button>
+          <div class="config-footer-left">
+            <button id="btn-refresh-detection" class="config-refresh-btn">\u{1F504} Appliquer aux tickets</button>
+            <span id="refresh-status" class="config-refresh-status"></span>
+          </div>
+          <div class="config-footer-right">
+            <button id="btn-import-config" class="config-io-btn">\u{1F4E5} Importer</button>
+            <button id="btn-export-config" class="config-io-btn">\u{1F4E4} Exporter</button>
+          </div>
         </div>
       </div>
     `);
@@ -3016,7 +3637,9 @@
      * Rafraîchit le contenu des onglets
      */
     _refreshContent() {
+      this._renderTagSuggestions();
       this._renderTagsList();
+      this._renderProjectSuggestions();
       this._renderProjectRules();
       this._renderBlacklist();
     }
@@ -3039,6 +3662,170 @@
     `).join(""));
     }
     /**
+     * Extrait les suggestions de tags depuis les tickets
+     */
+    _extractTagSuggestions() {
+      const suggestions = /* @__PURE__ */ new Map();
+      const existingTags = new Set(UserConfig.customTags.map((t) => t.toLowerCase()));
+      const existingLabels = /* @__PURE__ */ new Set();
+      State.tasks.forEach((task) => {
+        if (task.labels) {
+          task.labels.forEach((l) => existingLabels.add(l.toLowerCase()));
+        }
+      });
+      const statuses = /* @__PURE__ */ new Map();
+      State.tasks.forEach((task) => {
+        if (task.status) {
+          const status = task.status;
+          statuses.set(status, (statuses.get(status) || 0) + 1);
+        }
+      });
+      statuses.forEach((count, status) => {
+        const lower = status.toLowerCase();
+        if (!existingTags.has(lower) && !existingLabels.has(lower)) {
+          suggestions.set(status, { count, source: "status" });
+        }
+      });
+      const projects = /* @__PURE__ */ new Map();
+      State.tasks.forEach((task) => {
+        if (task.project) {
+          const project = task.project;
+          projects.set(project, (projects.get(project) || 0) + 1);
+        }
+      });
+      projects.forEach((count, project) => {
+        const lower = project.toLowerCase();
+        if (!existingTags.has(lower) && !existingLabels.has(lower)) {
+          suggestions.set(project, { count, source: "project" });
+        }
+      });
+      const components = /* @__PURE__ */ new Map();
+      State.tasks.forEach((task) => {
+        if (task.components && Array.isArray(task.components)) {
+          task.components.forEach((comp) => {
+            components.set(comp, (components.get(comp) || 0) + 1);
+          });
+        }
+      });
+      components.forEach((count, comp) => {
+        const lower = comp.toLowerCase();
+        if (!existingTags.has(lower) && !existingLabels.has(lower) && !suggestions.has(comp)) {
+          suggestions.set(comp, { count, source: "component" });
+        }
+      });
+      const types = /* @__PURE__ */ new Map();
+      State.tasks.forEach((task) => {
+        if (task.type) {
+          types.set(task.type, (types.get(task.type) || 0) + 1);
+        }
+      });
+      types.forEach((count, type) => {
+        const lower = type.toLowerCase();
+        if (!existingTags.has(lower) && !existingLabels.has(lower) && !suggestions.has(type)) {
+          suggestions.set(type, { count, source: "type" });
+        }
+      });
+      const priorities = /* @__PURE__ */ new Map();
+      State.tasks.forEach((task) => {
+        if (task.priority) {
+          priorities.set(task.priority, (priorities.get(task.priority) || 0) + 1);
+        }
+      });
+      priorities.forEach((count, priority) => {
+        const lower = priority.toLowerCase();
+        if (!existingTags.has(lower) && !existingLabels.has(lower) && !suggestions.has(priority)) {
+          suggestions.set(priority, { count, source: "priority" });
+        }
+      });
+      return Array.from(suggestions.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 20);
+    }
+    /**
+     * Rend les suggestions de tags
+     */
+    _renderTagSuggestions() {
+      const container = $("#tag-suggestions", this._element);
+      if (!container) return;
+      const suggestions = this._extractTagSuggestions();
+      if (suggestions.length === 0) {
+        setHtml(container, "");
+        return;
+      }
+      const sourceIcons = {
+        status: "\u{1F4CA}",
+        project: "\u{1F4C1}",
+        component: "\u{1F9E9}",
+        type: "\u{1F4CB}",
+        priority: "\u26A1"
+      };
+      setHtml(container, `
+      <div class="config-suggestions-box">
+        <span class="config-suggestions-hint">\u{1F4A1} Suggestions (clic = ajouter) :</span>
+        <div class="config-suggestions-list">
+          ${suggestions.map(([name, { count, source }]) => `
+            <button class="config-suggestion config-tag-suggestion" data-tag-suggestion="${escapeAttr(name)}" title="${source}">
+              ${sourceIcons[source] || "\u{1F3F7}\uFE0F"} ${escapeAttr(name)} <span class="suggestion-count">${count}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `);
+    }
+    /**
+     * Extrait les suggestions de noms de projets depuis les titres des tickets
+     */
+    _extractProjectSuggestions() {
+      const suggestions = /* @__PURE__ */ new Map();
+      const existingProjects = new Set(UserConfig.projectRules.map((r) => r.name.toLowerCase()));
+      const existingPatterns = /* @__PURE__ */ new Set();
+      UserConfig.projectRules.forEach((r) => r.patterns.forEach((p) => existingPatterns.add(p.toLowerCase())));
+      State.tasks.forEach((task) => {
+        const title = task.summary || "";
+        const bracketMatches = title.match(/\[([^\]]+)\]/g);
+        if (bracketMatches) {
+          bracketMatches.forEach((match) => {
+            const name = match.slice(1, -1).trim();
+            if (name && !existingProjects.has(name.toLowerCase()) && !existingPatterns.has(name.toLowerCase())) {
+              suggestions.set(name, (suggestions.get(name) || 0) + 1);
+            }
+          });
+        }
+        const acronymMatches = title.match(/\b[A-Z]{2,}(?:\d+)?\b/g);
+        if (acronymMatches) {
+          acronymMatches.forEach((name) => {
+            const ignore = ["API", "URL", "HTTP", "HTTPS", "JSON", "XML", "HTML", "CSS", "SQL", "PHP", "TODO", "FIXME", "BUG", "WIP"];
+            if (!ignore.includes(name) && !existingProjects.has(name.toLowerCase()) && !existingPatterns.has(name.toLowerCase())) {
+              suggestions.set(name, (suggestions.get(name) || 0) + 1);
+            }
+          });
+        }
+      });
+      return Array.from(suggestions.entries()).filter(([, count]) => count >= 1).sort((a, b) => b[1] - a[1]).slice(0, 15);
+    }
+    /**
+     * Rend les suggestions de projets
+     */
+    _renderProjectSuggestions() {
+      const container = $("#project-suggestions", this._element);
+      if (!container) return;
+      const suggestions = this._extractProjectSuggestions();
+      if (suggestions.length === 0) {
+        setHtml(container, "");
+        return;
+      }
+      setHtml(container, `
+      <div class="config-suggestions-box">
+        <span class="config-suggestions-hint">\u{1F4A1} Suggestions depuis les titres (clic = ajouter) :</span>
+        <div class="config-suggestions-list">
+          ${suggestions.map(([name, count]) => `
+            <button class="config-suggestion" data-suggestion="${escapeAttr(name)}">
+              ${escapeAttr(name)} <span class="suggestion-count">${count}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `);
+    }
+    /**
      * Rend la liste des règles de projet
      */
     _renderProjectRules() {
@@ -3052,7 +3839,8 @@
       setHtml(container, rules.map((rule) => `
       <div class="config-item config-item-project">
         <div class="config-project-header">
-          <span class="config-item-label">\u{1F4C1} <strong>${escapeAttr(rule.name)}</strong></span>
+          <span class="config-item-label">\u{1F4C1}</span>
+          <input type="text" class="config-project-name-input" value="${escapeAttr(rule.name)}" data-original="${escapeAttr(rule.name)}">
           <button class="config-item-remove" data-action="remove-project" data-value="${escapeAttr(rule.name)}">\u2715</button>
         </div>
         <div class="config-project-patterns">
@@ -3145,10 +3933,37 @@
             e.target.value = "";
           }
         }
+        if (e.key === "Enter" && e.target.classList.contains("config-project-name-input")) {
+          e.target.blur();
+        }
       });
+      this._element.addEventListener("blur", (e) => {
+        if (e.target.classList.contains("config-project-name-input")) {
+          const originalName = e.target.dataset.original;
+          const newName = e.target.value.trim();
+          if (newName && newName !== originalName) {
+            UserConfig.renameProject(originalName, newName);
+          } else if (!newName) {
+            e.target.value = originalName;
+          }
+        }
+      }, true);
+      this._element.addEventListener("click", (e) => {
+        const suggestion = e.target.closest(".config-suggestion");
+        if (!suggestion) return;
+        const tagName = suggestion.dataset.tagSuggestion;
+        if (tagName) {
+          UserConfig.addCustomTag(tagName);
+          return;
+        }
+        const projectName = suggestion.dataset.suggestion;
+        if (projectName) {
+          UserConfig.addProjectRule(projectName, [projectName.toLowerCase()]);
+        }
+      });
+      $("#btn-refresh-detection", this._element)?.addEventListener("click", () => this._refreshDetection());
       $("#btn-export-config", this._element)?.addEventListener("click", () => this._exportConfig());
       $("#btn-import-config", this._element)?.addEventListener("click", () => this._importConfig());
-      $("#btn-reset-config", this._element)?.addEventListener("click", () => this._resetConfig());
     }
     /**
      * Change d'onglet
@@ -3194,6 +4009,21 @@
         UserConfig.addToBlacklist(input.value.trim());
         input.value = "";
       }
+    }
+    /**
+     * Rafraîchit la détection de projet sur tous les tickets
+     */
+    _refreshDetection() {
+      const statusEl = $("#refresh-status", this._element);
+      const result = Storage.refreshProjectDetection();
+      if (statusEl) {
+        statusEl.textContent = result.success ? `\u2713 ${result.message}` : `\u26A0\uFE0F ${result.message}`;
+        statusEl.className = "config-refresh-status " + (result.success ? "success" : "error");
+        setTimeout(() => {
+          statusEl.textContent = "";
+        }, 3e3);
+      }
+      this._renderProjectSuggestions();
     }
     /**
      * Exporte la configuration
@@ -3257,6 +4087,376 @@
   };
   var ConfigModal = new ConfigModalComponent();
 
+  // js/components/modals/edit-task.js
+  var EditTaskModalComponent = class {
+    constructor() {
+      this._element = null;
+      this._isOpen = false;
+      this._currentTaskKey = null;
+    }
+    /**
+     * Initialise le composant
+     * @param {string} selector - Sélecteur du conteneur modal
+     */
+    init(selector) {
+      this._element = $(selector);
+      if (!this._element) {
+        console.error("Edit task modal container not found:", selector);
+        return;
+      }
+      this._render();
+      this._attachEventListeners();
+    }
+    /**
+     * Rend la structure de la modal
+     */
+    _render() {
+      setHtml(this._element, `
+      <div class="modal-content modal-content-medium">
+        <div class="modal-header">
+          <h2 id="edit-task-title">Edition du ticket</h2>
+          <button id="close-edit-task-modal" class="close-modal-btn">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Lien JIRA -->
+          <div class="edit-section">
+            <label>Ticket JIRA</label>
+            <a id="edit-task-jira-link" href="#" target="_blank" class="jira-link"></a>
+          </div>
+
+          <!-- Titre -->
+          <div class="edit-section">
+            <label for="edit-task-summary">Titre</label>
+            <input type="text" id="edit-task-summary" class="edit-input" placeholder="Titre du ticket...">
+          </div>
+
+          <!-- Projet et Statut sur la m\xEAme ligne -->
+          <div class="edit-section edit-section-row">
+            <div class="edit-field">
+              <label for="edit-task-project">Projet</label>
+              <input type="text" id="edit-task-project" class="edit-input" list="project-list" placeholder="Projet...">
+              <datalist id="project-list"></datalist>
+            </div>
+            <div class="edit-field">
+              <label for="edit-task-status">Statut</label>
+              <select id="edit-task-status" class="edit-input"></select>
+            </div>
+          </div>
+
+          <!-- Date d'\xE9ch\xE9ance -->
+          <div class="edit-section">
+            <label for="edit-task-duedate">Date d'\xE9ch\xE9ance</label>
+            <input type="date" id="edit-task-duedate" class="edit-input">
+            <div class="date-quick-buttons">
+              <button type="button" class="date-quick-btn" data-date="today">Aujourd'hui</button>
+              <button type="button" class="date-quick-btn" data-date="tomorrow">Demain</button>
+              <button type="button" class="date-quick-btn" data-date="+3">J+3</button>
+              <button type="button" class="date-quick-btn" data-date="+7">J+7</button>
+              <button type="button" class="date-quick-btn" data-date="next-monday">Lundi</button>
+              <button type="button" class="date-quick-btn" data-date="end-month">Fin mois</button>
+              <button type="button" class="date-quick-btn date-quick-btn-clear" data-date="clear">\u2715</button>
+            </div>
+          </div>
+
+          <!-- Labels -->
+          <div class="edit-section">
+            <label>Labels</label>
+            <div id="edit-task-labels" class="edit-labels-container"></div>
+            <div class="edit-add-label">
+              <input type="text" id="edit-new-label" placeholder="Nouveau label..." class="edit-input edit-input-small">
+              <button id="btn-add-label" class="edit-add-btn">+ Ajouter</button>
+            </div>
+            <div class="edit-suggested-labels">
+              <span class="suggested-label-hint">Labels sugg\xE9r\xE9s:</span>
+              <div id="edit-suggested-labels-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="btn-save-task" class="save-task-btn">Enregistrer</button>
+          <button id="btn-cancel-task" class="cancel-task-btn">Annuler</button>
+        </div>
+      </div>
+    `);
+    }
+    /**
+     * Attache les écouteurs d'événements
+     */
+    _attachEventListeners() {
+      const closeBtn = $("#close-edit-task-modal", this._element);
+      closeBtn?.addEventListener("click", () => this.close());
+      const cancelBtn = $("#btn-cancel-task", this._element);
+      cancelBtn?.addEventListener("click", () => this.close());
+      this._element.addEventListener("click", (e) => {
+        if (e.target === this._element) {
+          this.close();
+        }
+      });
+      const saveBtn = $("#btn-save-task", this._element);
+      saveBtn?.addEventListener("click", () => this._saveTask());
+      const addLabelBtn = $("#btn-add-label", this._element);
+      addLabelBtn?.addEventListener("click", () => this._addLabel());
+      const newLabelInput = $("#edit-new-label", this._element);
+      newLabelInput?.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") this._addLabel();
+      });
+      this._element.addEventListener("click", (e) => {
+        const removeBtn = e.target.closest(".label-remove-btn");
+        if (removeBtn) {
+          const label = removeBtn.dataset.label;
+          this._removeLabel(label);
+        }
+        const suggestedLabel = e.target.closest(".suggested-label");
+        if (suggestedLabel) {
+          const label = suggestedLabel.dataset.label;
+          this._addLabelValue(label);
+        }
+        const dateBtn = e.target.closest(".date-quick-btn");
+        if (dateBtn) {
+          this._handleQuickDate(dateBtn.dataset.date);
+        }
+      });
+    }
+    /**
+     * Gère les boutons de date rapide
+     */
+    _handleQuickDate(dateType) {
+      const dueDateInput = $("#edit-task-duedate", this._element);
+      if (!dueDateInput) return;
+      const today = /* @__PURE__ */ new Date();
+      today.setHours(0, 0, 0, 0);
+      let targetDate = null;
+      switch (dateType) {
+        case "today":
+          targetDate = today;
+          break;
+        case "tomorrow":
+          targetDate = new Date(today);
+          targetDate.setDate(targetDate.getDate() + 1);
+          break;
+        case "+3":
+          targetDate = new Date(today);
+          targetDate.setDate(targetDate.getDate() + 3);
+          break;
+        case "+7":
+          targetDate = new Date(today);
+          targetDate.setDate(targetDate.getDate() + 7);
+          break;
+        case "next-monday":
+          targetDate = new Date(today);
+          const dayOfWeek = targetDate.getDay();
+          const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+          targetDate.setDate(targetDate.getDate() + daysUntilMonday);
+          break;
+        case "end-month":
+          targetDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          break;
+        case "clear":
+          dueDateInput.value = "";
+          return;
+      }
+      if (targetDate) {
+        dueDateInput.value = targetDate.toISOString().split("T")[0];
+      }
+    }
+    /**
+     * Ouvre la modal pour un ticket
+     * @param {string} taskKey - Clé du ticket
+     */
+    open(taskKey) {
+      this._currentTaskKey = taskKey;
+      const task = State.tasks.find((t) => t.key === taskKey);
+      if (!task) {
+        console.error("Task not found:", taskKey);
+        return;
+      }
+      $("#edit-task-title", this._element).textContent = `Edition: ${task.key}`;
+      const jiraLink = $("#edit-task-jira-link", this._element);
+      jiraLink.href = task.link || "#";
+      jiraLink.textContent = `${task.key} - ${task.summary}`;
+      $("#edit-task-summary", this._element).value = task.summary || "";
+      const projectInput = $("#edit-task-project", this._element);
+      projectInput.value = task.project || "";
+      this._populateProjectList();
+      this._populateStatusSelect(task.status);
+      const dueDateInput = $("#edit-task-duedate", this._element);
+      if (task.dueDate) {
+        const date = new Date(task.dueDate);
+        dueDateInput.value = date.toISOString().split("T")[0];
+      } else {
+        dueDateInput.value = "";
+      }
+      this._renderLabels(task.labels || []);
+      this._renderSuggestedLabels(task.labels || []);
+      addClass(this._element, "show");
+      this._isOpen = true;
+    }
+    /**
+     * Ferme la modal
+     */
+    close() {
+      removeClass(this._element, "show");
+      this._isOpen = false;
+      this._currentTaskKey = null;
+    }
+    /**
+     * Remplit la liste des projets disponibles
+     */
+    _populateProjectList() {
+      const datalist = $("#project-list", this._element);
+      const projects = State.projects;
+      setHtml(datalist, projects.map((p) => `<option value="${escapeAttr(p)}">`).join(""));
+    }
+    /**
+     * Remplit le select des statuts
+     */
+    _populateStatusSelect(currentStatus) {
+      const select = $("#edit-task-status", this._element);
+      const currentStatusLower = (currentStatus || "").toLowerCase();
+      const statusesFromTasks = /* @__PURE__ */ new Set();
+      State.tasks.forEach((task) => {
+        if (task.status) {
+          statusesFromTasks.add(task.status);
+        }
+      });
+      const allStatuses = /* @__PURE__ */ new Set([...statusesFromTasks, ...Object.keys(Config.statusMap)]);
+      const getStatusInfo2 = (status) => {
+        const key = Object.keys(Config.statusMap).find((k) => k.toLowerCase() === status.toLowerCase());
+        return key ? Config.statusMap[key] : null;
+      };
+      const sortedStatuses = Array.from(allStatuses).sort((a, b) => {
+        const infoA = getStatusInfo2(a);
+        const infoB = getStatusInfo2(b);
+        const orderA = infoA?.key ? Config.statusOrder[infoA.key] || 99 : 99;
+        const orderB = infoB?.key ? Config.statusOrder[infoB.key] || 99 : 99;
+        return orderA - orderB;
+      });
+      let html = "";
+      sortedStatuses.forEach((status) => {
+        const selected = status.toLowerCase() === currentStatusLower ? "selected" : "";
+        const statusInfo = getStatusInfo2(status);
+        const icon = statusInfo?.icon || "\u{1F4CB}";
+        html += `<option value="${escapeAttr(status)}" ${selected}>${icon} ${escapeAttr(status)}</option>`;
+      });
+      setHtml(select, html);
+    }
+    /**
+     * Rend la liste des labels
+     */
+    _renderLabels(labels) {
+      const container = $("#edit-task-labels", this._element);
+      if (labels.length === 0) {
+        setHtml(container, '<span class="no-labels">Aucun label</span>');
+        return;
+      }
+      setHtml(container, labels.map((label) => `
+      <span class="edit-label ${label.toLowerCase() === "done" ? "label-done" : ""}">
+        ${escapeAttr(label)}
+        <button class="label-remove-btn" data-label="${escapeAttr(label)}">&times;</button>
+      </span>
+    `).join(""));
+    }
+    /**
+     * Rend les labels suggérés
+     */
+    _renderSuggestedLabels(currentLabels) {
+      const container = $("#edit-suggested-labels-list", this._element);
+      const allTags = /* @__PURE__ */ new Set();
+      State.tags.forEach((count, tag) => {
+        allTags.add(tag);
+      });
+      UserConfig.customTags.forEach((tag) => {
+        allTags.add(tag);
+      });
+      allTags.add("done");
+      const suggestions = Array.from(allTags).filter((tag) => !currentLabels.some((l) => l.toLowerCase() === tag.toLowerCase())).sort();
+      if (suggestions.length === 0) {
+        setHtml(container, '<span class="no-suggestions">Aucune suggestion</span>');
+        return;
+      }
+      setHtml(container, suggestions.map((tag) => `
+      <button class="suggested-label" data-label="${escapeAttr(tag)}">${escapeAttr(tag)}</button>
+    `).join(""));
+    }
+    /**
+     * Ajoute un label
+     */
+    _addLabel() {
+      const input = $("#edit-new-label", this._element);
+      const label = input.value.trim();
+      if (label) {
+        this._addLabelValue(label);
+        input.value = "";
+      }
+    }
+    /**
+     * Ajoute une valeur de label
+     */
+    _addLabelValue(label) {
+      if (!this._currentTaskKey) return;
+      const currentLabels = this._getCurrentLabelsFromDom();
+      if (!currentLabels.some((l) => l.toLowerCase() === label.toLowerCase())) {
+        const newLabels = [...currentLabels, label];
+        this._renderLabels(newLabels);
+        this._renderSuggestedLabels(newLabels);
+      }
+    }
+    /**
+     * Supprime un label
+     */
+    _removeLabel(label) {
+      if (!this._currentTaskKey) return;
+      const currentLabels = this._getCurrentLabelsFromDom();
+      const newLabels = currentLabels.filter((l) => l !== label);
+      this._renderLabels(newLabels);
+      this._renderSuggestedLabels(newLabels);
+    }
+    /**
+     * Récupère les labels actuels depuis le DOM
+     */
+    _getCurrentLabelsFromDom() {
+      const labelElements = $$(".edit-label .label-remove-btn", this._element);
+      return Array.from(labelElements).map((el) => el.dataset.label);
+    }
+    /**
+     * Sauvegarde les modifications
+     */
+    _saveTask() {
+      if (!this._currentTaskKey) return;
+      const summary = $("#edit-task-summary", this._element).value.trim();
+      const project = $("#edit-task-project", this._element).value.trim();
+      const status = $("#edit-task-status", this._element).value;
+      const statusMapKey = Object.keys(Config.statusMap).find(
+        (k) => k.toLowerCase() === status.toLowerCase()
+      );
+      const statusInfo = statusMapKey ? Config.statusMap[statusMapKey] : Config.defaultStatus;
+      const labels = this._getCurrentLabelsFromDom();
+      const dueDateInput = $("#edit-task-duedate", this._element);
+      const dueDate = dueDateInput.value || null;
+      State.updateTask(this._currentTaskKey, {
+        summary,
+        project,
+        status,
+        statusKey: statusInfo.key,
+        statusLabel: statusInfo.label,
+        statusIcon: statusInfo.icon,
+        statusCssClass: statusInfo.cssClass,
+        labels,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null
+      });
+      this.close();
+    }
+    /**
+     * Vérifie si la modal est ouverte
+     */
+    get isOpen() {
+      return this._isOpen;
+    }
+  };
+  var EditTaskModal = new EditTaskModalComponent();
+
   // js/app.js
   var JiraReportApp = class {
     constructor() {
@@ -3271,17 +4471,34 @@
       Stats.init("#stats");
       Sidebar.init("#filters");
       Timeline.init("#timeline-container");
-      TaskTable.init("#projects-container", "#view-mode-container");
+      TaskTable.init("#projects-container");
       ImportModal.init("#import-modal");
       ReportModal.init("#report-modal");
       ConfigModal.init("#config-modal");
+      EditTaskModal.init("#edit-task-modal");
       this._attachKeyboardShortcuts();
       this._attachCustomEvents();
+      this._attachGlobalDragDrop();
       this._attachBeforeUnload();
       this._updateFileSystemIndicator();
       State.subscribe("unsavedChanges", () => this._updateUnsavedIndicator());
+      await this._tryAutoLoadLastFile();
+      Storage.enableLiveSave();
       this._initialized = true;
       console.log("Jira Report App - Initialis\xE9");
+    }
+    /**
+     * Tente de recharger automatiquement le dernier fichier
+     */
+    async _tryAutoLoadLastFile() {
+      try {
+        const result = await Storage.tryLoadLastProject();
+        if (result.success) {
+          this._showNotification(result.message, "success");
+        }
+      } catch (err) {
+        console.warn("Auto-load failed:", err);
+      }
     }
     /**
      * Attache les raccourcis clavier
@@ -3308,6 +4525,7 @@
           ImportModal.close();
           ReportModal.close();
           ConfigModal.close();
+          EditTaskModal.close();
         }
         if ((e.ctrlKey || e.metaKey) && e.key === ",") {
           e.preventDefault();
@@ -3323,9 +4541,15 @@
       document.addEventListener("app:save", () => this._handleSave());
       document.addEventListener("app:import-xml", () => ImportModal.open());
       document.addEventListener("app:backup", () => this._handleBackup());
+      document.addEventListener("app:clear", () => this._handleClear());
       document.addEventListener("app:report-text", () => ReportModal.openText());
       document.addEventListener("app:report-html", () => ReportModal.openHtml());
       document.addEventListener("app:config", () => ConfigModal.open());
+      document.addEventListener("app:edit-task", (e) => {
+        if (e.detail && e.detail.taskKey) {
+          EditTaskModal.open(e.detail.taskKey);
+        }
+      });
     }
     /**
      * Attache l'événement beforeunload pour avertir des modifications non sauvegardées
@@ -3336,6 +4560,50 @@
           e.preventDefault();
           e.returnValue = "Vous avez des modifications non sauvegard\xE9es. \xCAtes-vous s\xFBr de vouloir quitter ?";
           return e.returnValue;
+        }
+      });
+    }
+    /**
+     * Attache le drag & drop global pour les fichiers XML
+     */
+    _attachGlobalDragDrop() {
+      document.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      document.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        document.body.classList.add("drag-over");
+      });
+      document.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.relatedTarget === null || !document.body.contains(e.relatedTarget)) {
+          document.body.classList.remove("drag-over");
+        }
+      });
+      document.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        document.body.classList.remove("drag-over");
+        const files = e.dataTransfer?.files;
+        if (!files || files.length === 0) return;
+        const file = files[0];
+        const fileName = file.name.toLowerCase();
+        if (fileName.endsWith(".xml") || file.type.includes("xml")) {
+          await ImportModal.openWithFile(file);
+        } else if (fileName.endsWith(".json") || file.type.includes("json")) {
+          try {
+            const content = await file.text();
+            const data = JSON.parse(content);
+            State.fromJSON(data);
+            this._showNotification(`Fichier charg\xE9: ${file.name}`, "success");
+          } catch (err) {
+            this._showNotification("Erreur: " + err.message, "error");
+          }
+        } else {
+          this._showNotification("Format non support\xE9. Utilisez XML ou JSON.", "error");
         }
       });
     }
@@ -3394,6 +4662,20 @@
       const result = Storage.downloadBackup();
       if (result.success) {
         this._showNotification(result.message, "success");
+      }
+    }
+    /**
+     * Gère l'effacement de tous les tickets
+     */
+    _handleClear() {
+      const taskCount = State.tasks.length;
+      if (taskCount === 0) {
+        this._showNotification("Aucun ticket \xE0 effacer", "info");
+        return;
+      }
+      if (confirm(`Effacer tous les ${taskCount} tickets ? Cette action est irr\xE9versible.`)) {
+        State.reset();
+        this._showNotification("Tous les tickets ont \xE9t\xE9 effac\xE9s", "success");
       }
     }
     /**

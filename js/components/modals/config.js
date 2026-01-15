@@ -4,6 +4,8 @@
  */
 
 import { UserConfig } from '../../services/user-config.js';
+import { Storage } from '../../services/storage.js';
+import { State } from '../../state.js';
 import { $, $$, setHtml, addClass, removeClass, escapeAttr } from '../../utils/dom.js';
 
 class ConfigModalComponent {
@@ -60,6 +62,8 @@ class ConfigModalComponent {
                 <button id="btn-add-tag" class="config-add-btn">+ Ajouter</button>
               </div>
 
+              <div id="tag-suggestions" class="config-suggestions"></div>
+
               <div id="custom-tags-list" class="config-items-list"></div>
             </div>
           </div>
@@ -75,6 +79,8 @@ class ConfigModalComponent {
                 <input type="text" id="new-project-pattern" placeholder="Mot-clé (dans le titre)..." class="config-input">
                 <button id="btn-add-project-rule" class="config-add-btn">+ Ajouter</button>
               </div>
+
+              <div id="project-suggestions" class="config-suggestions"></div>
 
               <div id="project-rules-list" class="config-items-list"></div>
             </div>
@@ -97,9 +103,14 @@ class ConfigModalComponent {
         </div>
 
         <div class="modal-footer">
-          <button id="btn-export-config" class="action-btn action-btn-secondary">📤 Exporter</button>
-          <button id="btn-import-config" class="action-btn action-btn-secondary">📥 Importer</button>
-          <button id="btn-reset-config" class="action-btn" style="border-color: var(--color-error); color: var(--color-error);">🗑️ Réinitialiser</button>
+          <div class="config-footer-left">
+            <button id="btn-refresh-detection" class="config-refresh-btn">🔄 Appliquer aux tickets</button>
+            <span id="refresh-status" class="config-refresh-status"></span>
+          </div>
+          <div class="config-footer-right">
+            <button id="btn-import-config" class="config-io-btn">📥 Importer</button>
+            <button id="btn-export-config" class="config-io-btn">📤 Exporter</button>
+          </div>
         </div>
       </div>
     `);
@@ -111,7 +122,9 @@ class ConfigModalComponent {
    * Rafraîchit le contenu des onglets
    */
   _refreshContent() {
+    this._renderTagSuggestions();
     this._renderTagsList();
+    this._renderProjectSuggestions();
     this._renderProjectRules();
     this._renderBlacklist();
   }
@@ -139,6 +152,208 @@ class ConfigModalComponent {
   }
 
   /**
+   * Extrait les suggestions de tags depuis les tickets
+   */
+  _extractTagSuggestions() {
+    const suggestions = new Map(); // name -> { count, source }
+    const existingTags = new Set(UserConfig.customTags.map(t => t.toLowerCase()));
+    const existingLabels = new Set();
+
+    // Collecter les labels existants dans les tickets
+    State.tasks.forEach(task => {
+      if (task.labels) {
+        task.labels.forEach(l => existingLabels.add(l.toLowerCase()));
+      }
+    });
+
+    // Suggestions basées sur les statuts
+    const statuses = new Map();
+    State.tasks.forEach(task => {
+      if (task.status) {
+        const status = task.status;
+        statuses.set(status, (statuses.get(status) || 0) + 1);
+      }
+    });
+    statuses.forEach((count, status) => {
+      const lower = status.toLowerCase();
+      if (!existingTags.has(lower) && !existingLabels.has(lower)) {
+        suggestions.set(status, { count, source: 'status' });
+      }
+    });
+
+    // Suggestions basées sur les projets
+    const projects = new Map();
+    State.tasks.forEach(task => {
+      if (task.project) {
+        const project = task.project;
+        projects.set(project, (projects.get(project) || 0) + 1);
+      }
+    });
+    projects.forEach((count, project) => {
+      const lower = project.toLowerCase();
+      if (!existingTags.has(lower) && !existingLabels.has(lower)) {
+        suggestions.set(project, { count, source: 'project' });
+      }
+    });
+
+    // Suggestions basées sur les composants
+    const components = new Map();
+    State.tasks.forEach(task => {
+      if (task.components && Array.isArray(task.components)) {
+        task.components.forEach(comp => {
+          components.set(comp, (components.get(comp) || 0) + 1);
+        });
+      }
+    });
+    components.forEach((count, comp) => {
+      const lower = comp.toLowerCase();
+      if (!existingTags.has(lower) && !existingLabels.has(lower) && !suggestions.has(comp)) {
+        suggestions.set(comp, { count, source: 'component' });
+      }
+    });
+
+    // Suggestions basées sur les types de ticket
+    const types = new Map();
+    State.tasks.forEach(task => {
+      if (task.type) {
+        types.set(task.type, (types.get(task.type) || 0) + 1);
+      }
+    });
+    types.forEach((count, type) => {
+      const lower = type.toLowerCase();
+      if (!existingTags.has(lower) && !existingLabels.has(lower) && !suggestions.has(type)) {
+        suggestions.set(type, { count, source: 'type' });
+      }
+    });
+
+    // Suggestions basées sur les priorités
+    const priorities = new Map();
+    State.tasks.forEach(task => {
+      if (task.priority) {
+        priorities.set(task.priority, (priorities.get(task.priority) || 0) + 1);
+      }
+    });
+    priorities.forEach((count, priority) => {
+      const lower = priority.toLowerCase();
+      if (!existingTags.has(lower) && !existingLabels.has(lower) && !suggestions.has(priority)) {
+        suggestions.set(priority, { count, source: 'priority' });
+      }
+    });
+
+    // Trier par fréquence
+    return Array.from(suggestions.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 20);
+  }
+
+  /**
+   * Rend les suggestions de tags
+   */
+  _renderTagSuggestions() {
+    const container = $('#tag-suggestions', this._element);
+    if (!container) return;
+
+    const suggestions = this._extractTagSuggestions();
+
+    if (suggestions.length === 0) {
+      setHtml(container, '');
+      return;
+    }
+
+    const sourceIcons = {
+      status: '📊',
+      project: '📁',
+      component: '🧩',
+      type: '📋',
+      priority: '⚡'
+    };
+
+    setHtml(container, `
+      <div class="config-suggestions-box">
+        <span class="config-suggestions-hint">💡 Suggestions (clic = ajouter) :</span>
+        <div class="config-suggestions-list">
+          ${suggestions.map(([name, { count, source }]) => `
+            <button class="config-suggestion config-tag-suggestion" data-tag-suggestion="${escapeAttr(name)}" title="${source}">
+              ${sourceIcons[source] || '🏷️'} ${escapeAttr(name)} <span class="suggestion-count">${count}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `);
+  }
+
+  /**
+   * Extrait les suggestions de noms de projets depuis les titres des tickets
+   */
+  _extractProjectSuggestions() {
+    const suggestions = new Map(); // name -> count
+    const existingProjects = new Set(UserConfig.projectRules.map(r => r.name.toLowerCase()));
+    const existingPatterns = new Set();
+    UserConfig.projectRules.forEach(r => r.patterns.forEach(p => existingPatterns.add(p.toLowerCase())));
+
+    State.tasks.forEach(task => {
+      const title = task.summary || '';
+
+      // Extraire les mots entre crochets [...]
+      const bracketMatches = title.match(/\[([^\]]+)\]/g);
+      if (bracketMatches) {
+        bracketMatches.forEach(match => {
+          const name = match.slice(1, -1).trim();
+          if (name && !existingProjects.has(name.toLowerCase()) && !existingPatterns.has(name.toLowerCase())) {
+            suggestions.set(name, (suggestions.get(name) || 0) + 1);
+          }
+        });
+      }
+
+      // Extraire les mots en MAJUSCULES de 2+ caractères (potentiels acronymes de projet)
+      const acronymMatches = title.match(/\b[A-Z]{2,}(?:\d+)?\b/g);
+      if (acronymMatches) {
+        acronymMatches.forEach(name => {
+          // Ignorer les mots courants en majuscules
+          const ignore = ['API', 'URL', 'HTTP', 'HTTPS', 'JSON', 'XML', 'HTML', 'CSS', 'SQL', 'PHP', 'TODO', 'FIXME', 'BUG', 'WIP'];
+          if (!ignore.includes(name) && !existingProjects.has(name.toLowerCase()) && !existingPatterns.has(name.toLowerCase())) {
+            suggestions.set(name, (suggestions.get(name) || 0) + 1);
+          }
+        });
+      }
+    });
+
+    // Trier par fréquence
+    return Array.from(suggestions.entries())
+      .filter(([, count]) => count >= 1)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15);
+  }
+
+  /**
+   * Rend les suggestions de projets
+   */
+  _renderProjectSuggestions() {
+    const container = $('#project-suggestions', this._element);
+    if (!container) return;
+
+    const suggestions = this._extractProjectSuggestions();
+
+    if (suggestions.length === 0) {
+      setHtml(container, '');
+      return;
+    }
+
+    setHtml(container, `
+      <div class="config-suggestions-box">
+        <span class="config-suggestions-hint">💡 Suggestions depuis les titres (clic = ajouter) :</span>
+        <div class="config-suggestions-list">
+          ${suggestions.map(([name, count]) => `
+            <button class="config-suggestion" data-suggestion="${escapeAttr(name)}">
+              ${escapeAttr(name)} <span class="suggestion-count">${count}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `);
+  }
+
+  /**
    * Rend la liste des règles de projet
    */
   _renderProjectRules() {
@@ -155,7 +370,8 @@ class ConfigModalComponent {
     setHtml(container, rules.map(rule => `
       <div class="config-item config-item-project">
         <div class="config-project-header">
-          <span class="config-item-label">📁 <strong>${escapeAttr(rule.name)}</strong></span>
+          <span class="config-item-label">📁</span>
+          <input type="text" class="config-project-name-input" value="${escapeAttr(rule.name)}" data-original="${escapeAttr(rule.name)}">
           <button class="config-item-remove" data-action="remove-project" data-value="${escapeAttr(rule.name)}">✕</button>
         </div>
         <div class="config-project-patterns">
@@ -270,12 +486,51 @@ class ConfigModalComponent {
           e.target.value = '';
         }
       }
+      // Renommer projet sur Enter
+      if (e.key === 'Enter' && e.target.classList.contains('config-project-name-input')) {
+        e.target.blur();
+      }
     });
 
-    // Export/Import/Reset
+    // Renommer projet sur blur
+    this._element.addEventListener('blur', (e) => {
+      if (e.target.classList.contains('config-project-name-input')) {
+        const originalName = e.target.dataset.original;
+        const newName = e.target.value.trim();
+        if (newName && newName !== originalName) {
+          UserConfig.renameProject(originalName, newName);
+        } else if (!newName) {
+          e.target.value = originalName; // Restaurer si vide
+        }
+      }
+    }, true);
+
+    // Cliquer sur une suggestion de projet = ajouter directement
+    this._element.addEventListener('click', (e) => {
+      const suggestion = e.target.closest('.config-suggestion');
+      if (!suggestion) return;
+
+      // Suggestion de tag
+      const tagName = suggestion.dataset.tagSuggestion;
+      if (tagName) {
+        UserConfig.addCustomTag(tagName);
+        return;
+      }
+
+      // Suggestion de projet
+      const projectName = suggestion.dataset.suggestion;
+      if (projectName) {
+        // Ajouter le nom comme pattern (sans crochets)
+        UserConfig.addProjectRule(projectName, [projectName.toLowerCase()]);
+      }
+    });
+
+    // Rafraîchir la détection de projet
+    $('#btn-refresh-detection', this._element)?.addEventListener('click', () => this._refreshDetection());
+
+    // Import/Export config
     $('#btn-export-config', this._element)?.addEventListener('click', () => this._exportConfig());
     $('#btn-import-config', this._element)?.addEventListener('click', () => this._importConfig());
-    $('#btn-reset-config', this._element)?.addEventListener('click', () => this._resetConfig());
   }
 
   /**
@@ -330,6 +585,27 @@ class ConfigModalComponent {
       UserConfig.addToBlacklist(input.value.trim());
       input.value = '';
     }
+  }
+
+  /**
+   * Rafraîchit la détection de projet sur tous les tickets
+   */
+  _refreshDetection() {
+    const statusEl = $('#refresh-status', this._element);
+    const result = Storage.refreshProjectDetection();
+
+    if (statusEl) {
+      statusEl.textContent = result.success ? `✓ ${result.message}` : `⚠️ ${result.message}`;
+      statusEl.className = 'config-refresh-status ' + (result.success ? 'success' : 'error');
+
+      // Effacer le message après 3 secondes
+      setTimeout(() => {
+        statusEl.textContent = '';
+      }, 3000);
+    }
+
+    // Rafraîchir les suggestions
+    this._renderProjectSuggestions();
   }
 
   /**

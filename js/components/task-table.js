@@ -4,13 +4,13 @@
 
 import { State } from '../state.js';
 import { Config } from '../config.js';
+import { UserConfig } from '../services/user-config.js';
 import { $, setHtml, escapeAttr, delegate } from '../utils/dom.js';
 import { formatDate, getDueClass } from '../utils/date.js';
 
 class TaskTableComponent {
   constructor() {
     this._element = null;
-    this._viewModeElement = null;
     this._unsubscribers = [];
     this._sortState = {}; // { tableId: { key: 'title', dir: 'asc' } }
   }
@@ -18,66 +18,18 @@ class TaskTableComponent {
   /**
    * Initialise le composant
    * @param {string} containerSelector - Sélecteur du conteneur des tables
-   * @param {string} viewModeSelector - Sélecteur du sélecteur de vue
    */
-  init(containerSelector, viewModeSelector) {
+  init(containerSelector) {
     this._element = $(containerSelector);
-    this._viewModeElement = $(viewModeSelector);
 
     if (!this._element) {
       console.error('Task table container not found:', containerSelector);
       return;
     }
 
-    this._renderViewModeSelector();
     this.render();
     this._attachEventListeners();
     this._subscribeToState();
-  }
-
-  /**
-   * Rend le sélecteur de mode de vue
-   */
-  _renderViewModeSelector() {
-    if (!this._viewModeElement) return;
-
-    const viewMode = State.viewMode;
-    setHtml(this._viewModeElement, `
-      <div class="view-mode">
-        <button id="view-by-project" class="view-mode-btn ${viewMode === 'project' ? 'active' : ''}">
-          Par projet
-        </button>
-        <button id="view-by-date" class="view-mode-btn ${viewMode === 'date' ? 'active' : ''}">
-          Par date d'échéance
-        </button>
-      </div>
-    `);
-
-    // Events
-    const projectBtn = $('#view-by-project', this._viewModeElement);
-    const dateBtn = $('#view-by-date', this._viewModeElement);
-
-    projectBtn?.addEventListener('click', () => {
-      State.setViewMode('project');
-      this._updateViewModeButtons();
-    });
-
-    dateBtn?.addEventListener('click', () => {
-      State.setViewMode('date');
-      this._updateViewModeButtons();
-    });
-  }
-
-  /**
-   * Met à jour les boutons de mode de vue
-   */
-  _updateViewModeButtons() {
-    const projectBtn = $('#view-by-project', this._viewModeElement);
-    const dateBtn = $('#view-by-date', this._viewModeElement);
-    const viewMode = State.viewMode;
-
-    projectBtn?.classList.toggle('active', viewMode === 'project');
-    dateBtn?.classList.toggle('active', viewMode === 'date');
   }
 
   /**
@@ -155,13 +107,14 @@ class TaskTableComponent {
       <table class="tasks-table" data-sortable="true" data-table-id="${tableId}">
         <thead>
           <tr>
+            <th class="col-key" data-sort="key">Clé<span class="sort-indicator"></span></th>
             <th class="col-title" data-sort="title">Titre<span class="sort-indicator"></span></th>
             <th class="col-project" data-sort="project">Projet<span class="sort-indicator"></span></th>
             <th class="col-status" data-sort="status">Statut<span class="sort-indicator"></span></th>
             <th class="col-due ${dueSortClass}" data-sort="due">Échéance<span class="sort-indicator"></span></th>
             <th class="col-labels">Labels</th>
             <th class="col-priority" data-sort="priority">Priorité<span class="sort-indicator"></span></th>
-            <th class="col-link">Lien</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -172,39 +125,82 @@ class TaskTableComponent {
   }
 
   /**
+   * Récupère les infos de statut depuis Config.statusMap (case-insensitive)
+   * Si pas trouvé, retourne un objet avec le statut brut
+   */
+  _getStatusInfo(status) {
+    if (!status) return Config.defaultStatus;
+    const key = Object.keys(Config.statusMap).find(k => k.toLowerCase() === status.toLowerCase());
+    if (key) {
+      return Config.statusMap[key];
+    }
+    // Statut non mappé - retourner un objet avec le statut brut
+    // Détecter le type de statut basé sur des mots-clés (sauf "terminé" qui ne doit pas être auto-done)
+    const statusLower = status.toLowerCase();
+    // Seulement "Done", "Closed", "Resolved" sont auto-done, PAS "terminé"
+    if (statusLower === 'done' || statusLower === 'closed' || statusLower === 'resolved') {
+      return { key: 'done', label: status, icon: '✓', cssClass: 'status-done' };
+    }
+    if (statusLower.includes('progress') || statusLower.includes('cours') || statusLower.includes('développ') || statusLower.includes('terminé')) {
+      return { key: 'inprogress', label: status, icon: '⏳', cssClass: 'status-inprogress' };
+    }
+    if (statusLower.includes('review') || statusLower.includes('revue')) {
+      return { key: 'review', label: status, icon: '👀', cssClass: 'status-review' };
+    }
+    if (statusLower.includes('livr') || statusLower.includes('deliver')) {
+      return { key: 'delivered', label: status, icon: '📦', cssClass: 'status-delivered' };
+    }
+    if (statusLower.includes('prêt') || statusLower.includes('ready') || statusLower.includes('test')) {
+      return { key: 'ready', label: status, icon: '🚀', cssClass: 'status-ready' };
+    }
+    // Par défaut, afficher le statut brut avec style backlog
+    return { key: 'backlog', label: status, icon: '📋', cssClass: 'status-backlog' };
+  }
+
+  /**
    * Génère le HTML d'une ligne de tâche
    */
   _renderTaskRow(task) {
-    const isDone = task.statusKey === 'done';
+    // Toujours recalculer le statut depuis task.status pour avoir les bonnes valeurs
+    const statusInfo = this._getStatusInfo(task.status);
+    const statusKey = statusInfo.key;
+    // task.done est la propriété manuelle "terminé"
+    const isManualDone = task.done === true;
+    const isStatusDone = statusKey === 'done';
     const hasLabelDone = (task.labels || []).some(l => l.toLowerCase() === 'done');
-    const rowClass = isDone ? 'task-done' : (hasLabelDone ? 'task-label-done' : '');
+    const rowClass = isManualDone ? 'task-manual-done' : (isStatusDone ? 'task-done' : (hasLabelDone ? 'task-label-done' : ''));
 
     const dueDate = formatDate(task.dueDate);
     const dueClass = getDueClass(task.dueDate);
 
-    const statusIcon = task.statusIcon || '📋';
-    const statusLabel = task.statusLabel || 'Backlog';
-    const statusCss = task.statusCssClass || 'status-backlog';
+    const statusIcon = statusInfo.icon;
+    const statusLabel = statusInfo.label;
+    const statusCss = statusInfo.cssClass;
 
     const priorityText = task.priorityText || '-';
     const priorityCss = task.priorityCssClass || '';
 
     const labels = (task.labels || []).map(l => this._formatLabel(l)).join('');
-    const ajirUrl = task.key ? `${Config.urls.ajir}${task.key}` : null;
+    const jiraUrl = task.link || null;
+    const taskKey = task.key || '';
 
     return `
       <tr class="${rowClass}"
-          data-key="${escapeAttr(task.key || '')}"
+          data-key="${escapeAttr(taskKey)}"
           data-title="${escapeAttr(task.summary || '')}"
           data-due="${task.dueDate || ''}"
           data-priority="${task.priorityCssClass || ''}"
           data-person="${escapeAttr(task.reporter || '')}"
           data-project="${escapeAttr(task.project || '')}"
-          data-status="${task.statusKey || 'backlog'}">
+          data-status="${statusKey}">
+        <td class="task-key">
+          ${jiraUrl ? `<a href="${jiraUrl}" target="_blank" class="task-key-link">${escapeAttr(taskKey)}</a>` : escapeAttr(taskKey)}
+        </td>
         <td class="task-title">
           ${escapeAttr(task.summary || '')}
-          ${isDone ? '<span class="task-done-badge">✓ Terminé</span>' : ''}
-          ${!isDone && hasLabelDone ? '<span class="task-label-done-badge">✓ Terminé</span>' : ''}
+          ${isManualDone ? '<span class="task-manual-done-badge">✓ Terminé</span>' : ''}
+          ${!isManualDone && isStatusDone ? '<span class="task-done-badge">✓ Terminé</span>' : ''}
+          ${!isManualDone && !isStatusDone && hasLabelDone ? '<span class="task-label-done-badge">✓ Terminé</span>' : ''}
         </td>
         <td class="task-project">${escapeAttr(task.project || '')}</td>
         <td class="task-status">
@@ -213,8 +209,11 @@ class TaskTableComponent {
         <td class="task-due ${dueClass}">${dueDate}</td>
         <td><div class="task-labels">${labels}</div></td>
         <td class="priority ${priorityCss}">${priorityText}</td>
-        <td class="task-link">
-          ${ajirUrl ? `<a href="${ajirUrl}" target="_blank">ajir</a>` : ''}
+        <td class="task-actions">
+          <button class="action-btn action-done ${task.done ? 'is-done' : ''}" data-action="done" data-key="${escapeAttr(taskKey)}" title="${task.done ? 'Marquer non terminé' : 'Marquer terminé'}">${task.done ? '↩' : '✓'}</button>
+          <button class="action-btn action-edit" data-action="edit" data-key="${escapeAttr(taskKey)}" title="Modifier">✏️</button>
+          <button class="action-btn action-ban" data-action="ban" data-key="${escapeAttr(taskKey)}" title="Bloquer">🚫</button>
+          <button class="action-btn action-delete" data-action="delete" data-key="${escapeAttr(taskKey)}" title="Supprimer">🗑️</button>
         </td>
       </tr>
     `;
@@ -239,6 +238,68 @@ class TaskTableComponent {
     delegate(this._element, 'click', 'th[data-sort]', (e, th) => {
       this._handleSort(th);
     });
+
+    // Double-clic sur une ligne pour éditer le ticket
+    delegate(this._element, 'dblclick', 'tr[data-key]', (e, row) => {
+      const taskKey = row.dataset.key;
+      if (taskKey) {
+        document.dispatchEvent(new CustomEvent('app:edit-task', {
+          detail: { taskKey }
+        }));
+      }
+    });
+
+    // Boutons d'action
+    delegate(this._element, 'click', '.action-btn', (e, btn) => {
+      e.stopPropagation();
+      const action = btn.dataset.action;
+      const key = btn.dataset.key;
+
+      switch (action) {
+        case 'done':
+          this._handleToggleDone(key);
+          break;
+        case 'edit':
+          document.dispatchEvent(new CustomEvent('app:edit-task', {
+            detail: { taskKey: key }
+          }));
+          break;
+        case 'ban':
+          this._handleBan(key);
+          break;
+        case 'delete':
+          this._handleDelete(key);
+          break;
+      }
+    });
+  }
+
+  /**
+   * Gère le marquage terminé/non terminé d'un ticket
+   */
+  _handleToggleDone(key) {
+    const task = State.tasks.find(t => t.key === key);
+    if (task) {
+      State.updateTask(key, { done: !task.done });
+    }
+  }
+
+  /**
+   * Gère le blocage d'un ticket
+   */
+  _handleBan(key) {
+    if (confirm(`Bloquer le ticket ${key} ? Il sera masqué de l'affichage.`)) {
+      UserConfig.addToBlacklist(key);
+    }
+  }
+
+  /**
+   * Gère la suppression d'un ticket
+   */
+  _handleDelete(key) {
+    if (confirm(`Supprimer définitivement le ticket ${key} ?`)) {
+      State.removeTask(key);
+    }
   }
 
   /**
@@ -282,6 +343,10 @@ class TaskTableComponent {
       let valA, valB;
 
       switch (sortKey) {
+        case 'key':
+          valA = a.dataset.key || '';
+          valB = b.dataset.key || '';
+          break;
         case 'title':
           valA = a.dataset.title || '';
           valB = b.dataset.title || '';
@@ -333,8 +398,9 @@ class TaskTableComponent {
     const unsubTasks = State.subscribe('tasks', () => this.render());
     const unsubFilters = State.subscribe('filters', () => this.render());
     const unsubViewMode = State.subscribe('viewMode', () => this.render());
+    const unsubConfig = State.subscribe('userConfig', () => this.render());
 
-    this._unsubscribers.push(unsubTasks, unsubFilters, unsubViewMode);
+    this._unsubscribers.push(unsubTasks, unsubFilters, unsubViewMode, unsubConfig);
   }
 
   /**

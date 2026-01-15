@@ -13,7 +13,9 @@ import {
   saveAsJsonFile,
   downloadJson,
   generateFilename,
-  readFileAsText
+  readFileAsText,
+  saveFileHandle,
+  tryLoadLastFile
 } from '../utils/file.js';
 import { parseJiraXml, mergeTickets } from '../parsers/jira-xml.js';
 
@@ -22,6 +24,70 @@ class StorageService {
     this._autoSaveEnabled = false;
     this._autoSaveInterval = null;
     this._lastSaveTime = null;
+    this._liveSaveEnabled = false;
+    this._liveSaveTimeout = null;
+    this._liveSaveDelay = 1500; // 1.5 secondes après la dernière modification
+  }
+
+  /**
+   * Active le live save (sauvegarde automatique après chaque modification)
+   */
+  enableLiveSave() {
+    if (this._liveSaveEnabled) return;
+
+    this._liveSaveEnabled = true;
+
+    // S'abonner aux changements
+    State.subscribe('unsavedChanges', () => {
+      if (State.hasUnsavedChanges && State.currentFileHandle && this._liveSaveEnabled) {
+        this._scheduleLiveSave();
+      }
+    });
+
+    console.log('Live save activé');
+  }
+
+  /**
+   * Désactive le live save
+   */
+  disableLiveSave() {
+    this._liveSaveEnabled = false;
+    if (this._liveSaveTimeout) {
+      clearTimeout(this._liveSaveTimeout);
+      this._liveSaveTimeout = null;
+    }
+  }
+
+  /**
+   * Programme une sauvegarde live (debounced)
+   */
+  _scheduleLiveSave() {
+    // Annuler le timeout précédent
+    if (this._liveSaveTimeout) {
+      clearTimeout(this._liveSaveTimeout);
+    }
+
+    // Programmer une nouvelle sauvegarde
+    this._liveSaveTimeout = setTimeout(async () => {
+      if (State.hasUnsavedChanges && State.currentFileHandle) {
+        try {
+          const data = State.toJSON();
+          await saveToHandle(State.currentFileHandle, data);
+          State.setUnsavedChanges(false);
+          this._lastSaveTime = new Date();
+          console.log('Live save effectué');
+        } catch (err) {
+          console.warn('Erreur live save:', err);
+        }
+      }
+    }, this._liveSaveDelay);
+  }
+
+  /**
+   * Retourne si le live save est actif
+   */
+  get isLiveSaveEnabled() {
+    return this._liveSaveEnabled;
   }
 
   /**
@@ -31,13 +97,30 @@ class StorageService {
    */
   _applyProjectRules(tickets) {
     return tickets.map(ticket => {
-      // Si le projet est générique (ex: DEMAT), essayer de détecter depuis le titre
+      // Essayer de détecter le projet depuis le titre
       const detectedProject = UserConfig.detectProjectFromTitle(ticket.summary);
       if (detectedProject) {
         return { ...ticket, project: detectedProject };
       }
       return ticket;
     });
+  }
+
+  /**
+   * Rafraîchit les tickets en réappliquant les règles de projet
+   * @returns {object} Résultat du rafraîchissement
+   */
+  refreshProjectDetection() {
+    const currentTasks = State.tasks;
+    if (currentTasks.length === 0) {
+      return { success: false, message: 'Aucun ticket à rafraîchir' };
+    }
+
+    const updatedTasks = this._applyProjectRules(currentTasks);
+    State.setTasks(updatedTasks);
+    State.markAsModified();
+
+    return { success: true, message: `${updatedTasks.length} tickets mis à jour` };
   }
 
   /**
@@ -66,6 +149,8 @@ class StorageService {
       // Stocker le handle si disponible (File System Access API)
       if (handle) {
         State.setCurrentFileHandle(handle);
+        // Persister le handle dans IndexedDB pour rechargement
+        await saveFileHandle(handle);
       }
 
       return {
@@ -79,6 +164,42 @@ class StorageService {
         return { success: false, cancelled: true };
       }
       throw err;
+    }
+  }
+
+  /**
+   * Tente de recharger le dernier fichier ouvert
+   * @returns {Promise<object>} Résultat du chargement
+   */
+  async tryLoadLastProject() {
+    try {
+      const result = await tryLoadLastFile();
+
+      if (!result.success) {
+        return { success: false };
+      }
+
+      // Valider le contenu
+      if (!result.content || !result.content.tasks) {
+        return { success: false, message: 'Format de fichier invalide' };
+      }
+
+      // Charger les données dans l'état
+      State.fromJSON(result.content);
+
+      // Stocker le handle
+      if (result.handle) {
+        State.setCurrentFileHandle(result.handle);
+      }
+
+      return {
+        success: true,
+        message: `Fichier rechargé: ${result.filename || 'projet.json'}`,
+        taskCount: result.content.tasks.length
+      };
+    } catch (err) {
+      console.warn('Erreur lors du rechargement automatique:', err);
+      return { success: false };
     }
   }
 
@@ -224,6 +345,8 @@ class StorageService {
 
       if (handle) {
         State.setCurrentFileHandle(handle);
+        // Persister le handle dans IndexedDB pour rechargement
+        await saveFileHandle(handle);
       }
 
       State.setUnsavedChanges(false);

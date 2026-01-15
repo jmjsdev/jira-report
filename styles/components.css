@@ -355,13 +355,14 @@
   content: "⇅";
 }
 
-.tasks-table th.col-title { width: 34%; }
+.tasks-table th.col-key { width: 7%; }
+.tasks-table th.col-title { width: 26%; }
 .tasks-table th.col-project { width: 8%; }
 .tasks-table th.col-status { width: 10%; text-align: center; }
 .tasks-table th.col-due { width: 8%; text-align: center; }
-.tasks-table th.col-labels { width: 18%; }
-.tasks-table th.col-link { width: 10%; text-align: center; }
+.tasks-table th.col-labels { width: 16%; }
 .tasks-table th.col-priority { width: 7%; text-align: center; }
+.tasks-table th.col-actions { width: 10%; text-align: center; }
 
 .tasks-table td {
   border: 1px solid var(--color-gray-300);
@@ -420,6 +421,73 @@
 
 .task-link a:hover {
   text-decoration: underline;
+}
+
+/* Clé du ticket */
+.task-key {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.task-key-link {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.task-key-link:hover {
+  text-decoration: underline;
+}
+
+/* Actions */
+.task-actions {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.action-btn {
+  display: inline flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+  opacity: 0.6;
+  transition: all var(--transition-fast);
+}
+
+.action-btn:hover {
+  opacity: 1;
+  background: var(--color-gray-200);
+}
+
+.action-edit:hover {
+  background: #e3f2fd;
+}
+
+.action-ban:hover {
+  background: #fff3e0;
+}
+
+.action-delete:hover {
+  background: #ffebee;
+}
+
+.action-done:hover {
+  background: #e8f5e9;
+}
+
+.action-done.is-done {
+  opacity: 1;
+  background: var(--color-success);
+  color: white;
+}
+
+.action-done.is-done:hover {
+  background: var(--color-warning);
 }
 
 /* ============================================
@@ -489,6 +557,31 @@
   color: var(--color-gray-600);
 }
 
+/* Ticket marqué manuellement comme terminé */
+.tasks-table tr.task-manual-done {
+  background-color: #c8e6c9 !important;
+}
+
+.tasks-table tr.task-manual-done:hover {
+  background-color: #a5d6a7 !important;
+}
+
+.tasks-table tr.task-manual-done .task-title {
+  text-decoration: line-through;
+  color: var(--color-success);
+}
+
+.task-manual-done-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: var(--color-success);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
 .tasks-table tr.task-label-done {
   background-color: #d4edda !important;
 }
@@ -538,3 +631,11 @@
 .priority.medium { color: var(--color-warning); }
 .priority.low { color: var(--color-success); }
 .priority.lowest { color: var(--color-gray-600); }
+
+/* Message quand pas de filtres */
+.no-filters {
+  font-size: 12px;
+  color: var(--color-gray-500);
+  font-style: italic;
+}
+
