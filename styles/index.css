@@ -17,3 +17,6 @@
 /* Components */
 @import './components/toolbar.css';
 @import './components/notifications.css';
+@import './components.css';
+@import './timeline.css';
+@import './modals.css';
