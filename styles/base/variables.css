@@ -1,0 +1,49 @@
+/**
+ * Variables CSS
+ */
+:root {
+  --color-primary: #0066cc;
+  --color-primary-dark: #0052a3;
+  --color-primary-light: #e6f2ff;
+
+  --color-success: #28a745;
+  --color-warning: #fd7e14;
+  --color-error: #dc3545;
+  --color-info: #17a2b8;
+  --color-purple: #6f42c1;
+
+  --color-gray-100: #f8f9fa;
+  --color-gray-200: #e9ecef;
+  --color-gray-300: #dee2e6;
+  --color-gray-400: #ced4da;
+  --color-gray-500: #adb5bd;
+  --color-gray-600: #6c757d;
+  --color-gray-700: #495057;
+  --color-gray-800: #343a40;
+  --color-gray-900: #212529;
+
+  --color-text: #333333;
+  --color-text-light: #6c757d;
+  --color-bg: #ffffff;
+  --color-bg-alt: #f8f9fa;
+
+  --font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+  --font-mono: 'Courier New', monospace;
+
+  --sidebar-width: 280px;
+  --container-max-width: 2000px;
+  --toolbar-height: 52px;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 20px rgba(0,0,0,0.15);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 16px;
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
+}

@@ -1,0 +1,50 @@
+/**
+ * Reset & Base styles
+ */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Indicateur de modifications non sauvegardees */
+body.has-unsaved-changes::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-warning);
+  z-index: 10000;
+}
+
+/* Drag & Drop Global */
+body.drag-over::after {
+  content: 'Deposez le fichier ici';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(111, 66, 193, 0.9);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  z-index: 9999;
+  pointer-events: none;
+}

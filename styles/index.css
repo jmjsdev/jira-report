@@ -1,0 +1,19 @@
+/**
+ * Jira Report - Main CSS Entry Point
+ * All styles are imported from modular files
+ */
+
+/* Base */
+@import './base/variables.css';
+@import './base/reset.css';
+@import './base/utilities.css';
+
+/* Layout */
+@import './layout/container.css';
+@import './layout/header.css';
+@import './layout/sidebar.css';
+@import './layout/footer.css';
+
+/* Components */
+@import './components/toolbar.css';
+@import './components/notifications.css';

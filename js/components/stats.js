@@ -35,68 +35,68 @@ class StatsComponent {
     const viewMode = State.viewMode;
 
     setHtml(this._element, `
-      <div class="ribbon-group">
-        <span class="ribbon-group-title">Statistiques</span>
-        <div class="ribbon-group-content">
-          <span class="stats-info"><strong>${stats.totalTasks}</strong> tâches</span>
-          <span class="stats-info"><strong>${stats.totalProjects}</strong> projets</span>
+      <div class="toolbar-group">
+        <span class="toolbar-group-title">Statistiques</span>
+        <div class="toolbar-group-content">
+          <span class="toolbar-info"><strong>${stats.totalTasks}</strong> tâches</span>
+          <span class="toolbar-info"><strong>${stats.totalProjects}</strong> projets</span>
         </div>
       </div>
 
-      <span class="stats-sep"></span>
+      <span class="toolbar-sep"></span>
 
-      <div class="ribbon-group">
-        <span class="ribbon-group-title">Fichier</span>
-        <div class="ribbon-group-content">
-          <button id="btn-open" class="stats-btn" title="Ouvrir (Ctrl+O)">
+      <div class="toolbar-group">
+        <span class="toolbar-group-title">Fichier</span>
+        <div class="toolbar-group-content">
+          <button id="btn-open" class="toolbar-btn" title="Ouvrir (Ctrl+O)">
             <span class="btn-icon">📂</span><span class="btn-label">Ouvrir</span>
           </button>
-          <button id="btn-save" class="stats-btn stats-btn-primary" title="Sauvegarder (Ctrl+S)">
+          <button id="btn-save" class="toolbar-btn toolbar-btn-primary" title="Sauvegarder (Ctrl+S)">
             <span class="btn-icon">💾</span><span class="btn-label">Sauver</span>
           </button>
-          <button id="btn-import-xml" class="stats-btn" title="Import XML (Ctrl+I)">
+          <button id="btn-import-xml" class="toolbar-btn" title="Import XML (Ctrl+I)">
             <span class="btn-icon">📥</span><span class="btn-label">Import</span>
           </button>
-          <button id="btn-backup" class="stats-btn" title="Télécharger backup">
+          <button id="btn-backup" class="toolbar-btn" title="Télécharger backup">
             <span class="btn-icon">⬇️</span><span class="btn-label">Backup</span>
           </button>
-          <button id="btn-clear" class="stats-btn stats-btn-danger" title="Effacer tous les tickets">
+          <button id="btn-clear" class="toolbar-btn toolbar-btn-danger" title="Effacer tous les tickets">
             <span class="btn-icon">🗑️</span><span class="btn-label">Clear</span>
           </button>
         </div>
       </div>
 
-      <span class="stats-sep"></span>
+      <span class="toolbar-sep"></span>
 
-      <div class="ribbon-group">
-        <span class="ribbon-group-title">Affichage</span>
-        <div class="ribbon-group-content">
-          <button id="view-by-project" class="stats-btn stats-btn-toggle ${viewMode === 'project' ? 'active' : ''}" title="Vue par projet">
+      <div class="toolbar-group">
+        <span class="toolbar-group-title">Affichage</span>
+        <div class="toolbar-group-content">
+          <button id="view-by-project" class="toolbar-btn toolbar-btn-toggle ${viewMode === 'project' ? 'active' : ''}" title="Vue par projet">
             <span class="btn-icon">📁</span><span class="btn-label">Projet</span>
           </button>
-          <button id="view-by-date" class="stats-btn stats-btn-toggle ${viewMode === 'date' ? 'active' : ''}" title="Vue par date">
+          <button id="view-by-date" class="toolbar-btn toolbar-btn-toggle ${viewMode === 'date' ? 'active' : ''}" title="Vue par date">
             <span class="btn-icon">📅</span><span class="btn-label">Date</span>
           </button>
         </div>
       </div>
 
-      <span class="stats-sep"></span>
+      <span class="toolbar-sep"></span>
 
-      <div class="ribbon-group">
-        <span class="ribbon-group-title">Rapport</span>
-        <div class="ribbon-group-content">
-          <button id="btn-report-text" class="stats-btn" title="Rapport texte">
+      <div class="toolbar-group">
+        <span class="toolbar-group-title">Rapport</span>
+        <div class="toolbar-group-content">
+          <button id="btn-report-text" class="toolbar-btn" title="Rapport texte">
             <span class="btn-icon">📝</span><span class="btn-label">Texte</span>
           </button>
-          <button id="btn-report-html" class="stats-btn" title="Rapport HTML">
+          <button id="btn-report-html" class="toolbar-btn" title="Rapport HTML">
             <span class="btn-icon">🌐</span><span class="btn-label">HTML</span>
           </button>
         </div>
       </div>
 
-      <span class="stats-spacer"></span>
+      <span class="toolbar-spacer"></span>
 
-      <button id="btn-config" class="stats-btn" title="Configuration (Ctrl+,)">
+      <button id="btn-config" class="toolbar-btn" title="Configuration (Ctrl+,)">
         <span class="btn-icon">⚙️</span><span class="btn-label">Config</span>
       </button>
     `);

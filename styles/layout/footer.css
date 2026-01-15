@@ -1,0 +1,28 @@
+/**
+ * Footer styles
+ */
+.app-footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-gray-300);
+  color: var(--color-text-light);
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-shortcuts {
+  display: flex;
+  gap: 8px;
+}
+
+.footer-shortcuts kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--color-gray-100);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}

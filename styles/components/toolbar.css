@@ -1,0 +1,138 @@
+/**
+ * Toolbar (main action bar) - STICKY
+ */
+.toolbar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-gray-200);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+}
+
+/* Groupes style ruban */
+.toolbar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-group-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.toolbar-group-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--color-gray-500);
+  letter-spacing: 0.5px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--color-gray-300);
+  width: 100%;
+  text-align: center;
+}
+
+.toolbar-info {
+  font-size: 13px;
+  color: var(--color-gray-700);
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-info strong {
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--color-gray-400);
+  margin: 0 4px;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.toolbar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 10px;
+  height: fit-content;
+  background: var(--color-bg);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 50px;
+}
+
+.toolbar-btn .btn-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.toolbar-btn .btn-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-gray-600);
+}
+
+.toolbar-btn:hover {
+  background: var(--color-gray-100);
+  border-color: var(--color-gray-400);
+}
+
+.toolbar-btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.toolbar-btn-primary .btn-label {
+  color: white;
+}
+
+.toolbar-btn-primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.toolbar-btn-toggle.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.toolbar-btn-toggle.active .btn-label {
+  color: white;
+}
+
+.toolbar-btn-danger {
+  border-color: var(--color-error);
+}
+
+.toolbar-btn-danger .btn-label {
+  color: var(--color-error);
+}
+
+.toolbar-btn-danger:hover {
+  background: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.toolbar-btn-danger:hover .btn-label {
+  color: white;
+}

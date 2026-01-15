@@ -1,0 +1,43 @@
+/**
+ * Container & Main Layout
+ */
+.container {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 24px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Etat vide */
+.empty-state {
+  text-align: center;
+  padding: 60px 40px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-lg);
+  border: 2px dashed var(--color-gray-300);
+}
+
+.empty-state p {
+  margin: 8px 0;
+  color: var(--color-text-light);
+}
+
+.empty-state p:first-child {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-gray-700);
+}
