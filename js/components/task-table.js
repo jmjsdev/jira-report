@@ -110,6 +110,7 @@ class TaskTableComponent {
             <th class="col-key" data-sort="key">Clé<span class="sort-indicator"></span></th>
             <th class="col-title" data-sort="title">Titre<span class="sort-indicator"></span></th>
             <th class="col-project" data-sort="project">Projet<span class="sort-indicator"></span></th>
+            <th class="col-reporter" data-sort="person">Rapporteur<span class="sort-indicator"></span></th>
             <th class="col-status" data-sort="status">Statut<span class="sort-indicator"></span></th>
             <th class="col-due ${dueSortClass}" data-sort="due">Échéance<span class="sort-indicator"></span></th>
             <th class="col-labels">Labels</th>
@@ -203,6 +204,7 @@ class TaskTableComponent {
           ${!isManualDone && !isStatusDone && hasLabelDone ? '<span class="task-label-done-badge">✓ Terminé</span>' : ''}
         </td>
         <td class="task-project">${escapeAttr(task.project || '')}</td>
+        <td class="task-reporter">${escapeAttr(task.reporter || '')}</td>
         <td class="task-status">
           <span class="status-badge ${statusCss}">${statusIcon} ${statusLabel}</span>
         </td>
