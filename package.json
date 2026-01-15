@@ -1,0 +1,14 @@
+{
+  "name": "jira-report",
+  "version": "1.0.0",
+  "description": "Application de suivi de tickets JIRA - Pure HTML/JS",
+  "scripts": {
+    "build": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020",
+    "watch": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020 --watch"
+  },
+  "keywords": ["jira", "report", "html", "javascript"],
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  }
+}

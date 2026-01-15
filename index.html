@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jira Report</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/timeline.css">
+  <link rel="stylesheet" href="styles/modals.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header-wrapper">
+      <h1>Jira Report</h1>
+      <div class="header-info">
+        <span id="fs-support-indicator" class="fs-indicator"></span>
+      </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div id="stats" class="stats"></div>
+
+    <!-- Layout principal -->
+    <div class="main-layout">
+      <!-- Sidebar avec filtres -->
+      <aside class="sidebar">
+        <div id="filters" class="filters"></div>
+      </aside>
+
+      <!-- Contenu principal -->
+      <main class="main-content">
+        <!-- Timeline -->
+        <div id="timeline-container" class="timeline-container"></div>
+
+        <!-- Sélecteur de vue -->
+        <div id="view-mode-container" class="view-mode-container"></div>
+
+        <!-- Tables des tâches -->
+        <div id="projects-container"></div>
+      </main>
+    </div>
+
+    <!-- Footer -->
+    <div class="app-footer">
+      <span>Jira Report - Application HTML/JS pure</span>
+      <span class="footer-shortcuts">
+        <kbd>Ctrl+S</kbd> Sauvegarder |
+        <kbd>Ctrl+O</kbd> Ouvrir |
+        <kbd>Ctrl+I</kbd> Import XML
+      </span>
+    </div>
+  </div>
+
+  <!-- Modal Import XML -->
+  <div id="import-modal" class="modal"></div>
+
+  <!-- Modal Rapport -->
+  <div id="report-modal" class="modal"></div>
+
+  <!-- Modal Configuration -->
+  <div id="config-modal" class="modal"></div>
+
+  <!-- Conteneur de notifications -->
+  <div id="notification-container"></div>
+
+  <!-- Scripts -->
+  <script src="vendors/pako.min.js"></script>
+  <script src="js/app.bundle.js"></script>
+</body>
+</html>

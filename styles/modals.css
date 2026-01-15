@@ -1,0 +1,811 @@
+/**
+ * Styles des modales
+ */
+
+/* ============================================
+   Modal de base
+   ============================================ */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.2s;
+}
+
+.modal.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background-color: var(--color-bg);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.3s;
+}
+
+.modal-content-large {
+  max-width: 1000px;
+  max-height: 85vh;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   Header Modal
+   ============================================ */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-gray-300);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: var(--color-gray-600);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-normal);
+}
+
+.close-modal-btn:hover {
+  background: var(--color-bg-alt);
+  color: var(--color-error);
+}
+
+/* ============================================
+   Body Modal
+   ============================================ */
+.modal-body {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ============================================
+   Footer Modal
+   ============================================ */
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-gray-300);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ============================================
+   Options de colonnes (Modal Rapport)
+   ============================================ */
+.modal-columns-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: var(--color-bg-alt);
+  border-bottom: 1px solid var(--color-gray-300);
+}
+
+.columns-options-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-gray-700);
+}
+
+.column-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-gray-700);
+  cursor: pointer;
+  user-select: none;
+}
+
+.column-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.column-checkbox:hover {
+  color: var(--color-primary);
+}
+
+/* ============================================
+   Contenu du rapport texte
+   ============================================ */
+#report-text-content {
+  width: 100%;
+  flex: 1;
+  min-height: 500px;
+  max-height: 600px;
+  padding: 16px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  background: var(--color-bg-alt);
+  color: var(--color-text);
+  overflow: auto;
+  white-space: pre;
+}
+
+#report-html-content {
+  width: 100%;
+  flex: 1;
+  max-height: 600px;
+  padding: 16px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  overflow-y: auto;
+}
+
+.copy-report-btn {
+  padding: 10px 20px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.copy-report-btn:hover {
+  background: var(--color-primary-dark);
+}
+
+.copy-status {
+  font-size: 14px;
+  color: var(--color-success);
+  font-weight: 500;
+}
+
+/* ============================================
+   Table du rapport HTML
+   ============================================ */
+.report-table {
+  border-collapse: collapse;
+  font-family: var(--font-family);
+  font-size: 14px;
+  width: 100%;
+}
+
+.report-table th,
+.report-table td {
+  border: 1px solid var(--color-gray-300);
+  padding: 8px;
+}
+
+.report-table thead tr {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.report-table th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-normal);
+}
+
+.report-table th[data-sort]:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.report-table th .sort-indicator {
+  margin-left: 6px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.report-table th.sort-asc .sort-indicator::after {
+  content: "▲";
+  opacity: 1;
+}
+
+.report-table th.sort-desc .sort-indicator::after {
+  content: "▼";
+  opacity: 1;
+}
+
+.report-table .row-even {
+  background-color: var(--color-bg-alt);
+}
+
+.report-table .row-odd {
+  background-color: var(--color-bg);
+}
+
+.report-table .row-done {
+  background-color: #d4edda;
+}
+
+.report-table .cell-status {
+  text-align: center;
+}
+
+.report-table .title-link {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.report-table .title-done {
+  color: var(--color-success);
+  text-decoration: line-through;
+}
+
+.report-total {
+  margin-top: 16px;
+  font-family: var(--font-family);
+  font-size: 14px;
+}
+
+/* ============================================
+   Modal Import JIRA
+   ============================================ */
+.jira-import-instructions {
+  margin-bottom: 16px;
+}
+
+.jira-import-instructions p {
+  margin: 0 0 8px 0;
+  color: var(--color-gray-700);
+}
+
+.jira-import-hint {
+  font-size: 13px;
+  color: var(--color-gray-600);
+  font-style: italic;
+}
+
+/* ============================================
+   Dropzone
+   ============================================ */
+.jira-dropzone {
+  border: 2px dashed var(--color-gray-300);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 12px;
+  transition: all var(--transition-normal);
+  background: var(--color-bg-alt);
+}
+
+.jira-dropzone:hover {
+  border-color: var(--color-purple);
+  background: #f8f5ff;
+}
+
+.jira-dropzone.dragover {
+  border-color: var(--color-purple);
+  background: #ede7f6;
+  border-style: solid;
+}
+
+.jira-dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.jira-dropzone-icon {
+  font-size: 32px;
+}
+
+.jira-dropzone-text {
+  font-size: 14px;
+  color: var(--color-gray-700);
+  font-weight: 500;
+}
+
+.jira-dropzone-or {
+  font-size: 12px;
+  color: var(--color-gray-600);
+}
+
+.jira-file-btn {
+  padding: 8px 16px;
+  background: var(--color-purple);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-normal);
+}
+
+.jira-file-btn:hover {
+  background: #5a32a3;
+}
+
+.jira-file-btn input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ============================================
+   Input XML
+   ============================================ */
+.jira-xml-input {
+  width: 100%;
+  min-height: 150px;
+  max-height: 200px;
+  padding: 12px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  resize: vertical;
+  background: var(--color-bg-alt);
+}
+
+.jira-xml-input:focus {
+  outline: none;
+  border-color: var(--color-purple);
+  box-shadow: 0 0 0 2px rgba(111, 66, 193, 0.15);
+}
+
+/* ============================================
+   Actions Import
+   ============================================ */
+.jira-import-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.analyze-jira-btn {
+  padding: 10px 24px;
+  background: var(--color-purple);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.analyze-jira-btn:hover {
+  background: #5a32a3;
+}
+
+.jira-analyze-status {
+  font-size: 14px;
+  color: var(--color-gray-700);
+}
+
+.jira-status-error {
+  color: var(--color-error);
+}
+
+.jira-status-success {
+  color: var(--color-success);
+}
+
+/* ============================================
+   Résultats Import
+   ============================================ */
+.jira-import-results {
+  margin-top: 16px;
+  border-top: 1px solid var(--color-gray-300);
+  padding-top: 16px;
+}
+
+.jira-results-summary {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.jira-stat {
+  text-align: center;
+  padding: 16px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-alt);
+}
+
+.jira-stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.jira-stat-label {
+  font-size: 12px;
+  color: var(--color-gray-600);
+  text-transform: uppercase;
+}
+
+.jira-stat-total .jira-stat-value {
+  color: var(--color-primary);
+}
+
+.jira-stat-new {
+  background: #d4edda;
+}
+
+.jira-stat-new .jira-stat-value {
+  color: var(--color-success);
+}
+
+.jira-stat-existing {
+  background: var(--color-gray-200);
+}
+
+.jira-stat-existing .jira-stat-value {
+  color: var(--color-gray-600);
+}
+
+.jira-results-section {
+  margin-bottom: 24px;
+}
+
+.jira-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.jira-section-new {
+  background: #d4edda;
+  color: #155724;
+}
+
+.jira-section-existing {
+  background: var(--color-gray-200);
+  color: var(--color-gray-700);
+}
+
+.jira-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.jira-results-table th,
+.jira-results-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--color-gray-300);
+  text-align: left;
+}
+
+.jira-results-table th {
+  background: var(--color-bg-alt);
+  font-weight: 600;
+  color: var(--color-gray-700);
+}
+
+.jira-results-table a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.jira-results-table a:hover {
+  text-decoration: underline;
+}
+
+.jira-row-existing {
+  opacity: 0.7;
+}
+
+.jira-status {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--color-gray-200);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+.jira-existing-details {
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: var(--color-bg-alt);
+}
+
+.jira-existing-details summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--color-gray-700);
+  padding: 4px 0;
+}
+
+.jira-existing-details summary:hover {
+  color: var(--color-primary);
+}
+
+.jira-existing-details[open] summary {
+  margin-bottom: 12px;
+}
+
+/* ============================================
+   Actions finales Import
+   ============================================ */
+.import-actions-final {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-gray-300);
+}
+
+.import-actions-final .action-btn {
+  flex: 1;
+  padding: 12px 20px;
+}
+
+/* ============================================
+   Modal Configuration
+   ============================================ */
+.config-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 24px;
+  background: var(--color-bg-alt);
+  border-bottom: 1px solid var(--color-gray-300);
+}
+
+.config-tab {
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-gray-600);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.config-tab:hover {
+  color: var(--color-primary);
+  background: var(--color-bg);
+}
+
+.config-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  background: var(--color-bg);
+}
+
+.config-tab-content {
+  display: none;
+}
+
+.config-tab-content.active {
+  display: block;
+}
+
+.config-section {
+  margin-bottom: 24px;
+}
+
+.config-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-gray-800);
+  margin: 0 0 8px 0;
+}
+
+.config-hint {
+  font-size: 13px;
+  color: var(--color-gray-600);
+  margin: 0 0 16px 0;
+}
+
+.config-add-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.config-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  background: var(--color-bg);
+}
+
+.config-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+}
+
+.config-input-small {
+  width: 120px;
+  padding: 4px 8px;
+  border: 1px dashed var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  background: transparent;
+}
+
+.config-input-small:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  border-style: solid;
+}
+
+.config-add-btn {
+  padding: 10px 16px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-normal);
+}
+
+.config-add-btn:hover {
+  background: var(--color-primary-dark);
+}
+
+.config-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-empty {
+  color: var(--color-gray-500);
+  font-style: italic;
+  padding: 16px;
+  text-align: center;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-200);
+}
+
+.config-item-project {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.config-project-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.config-item-label {
+  font-size: 14px;
+  color: var(--color-gray-700);
+}
+
+.config-item-remove {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--color-gray-500);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-normal);
+}
+
+.config-item-remove:hover {
+  background: var(--color-error);
+  color: white;
+}
+
+.config-project-patterns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 24px;
+}
+
+.config-pattern {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  color: var(--color-primary);
+}
+
+.config-pattern-remove {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--color-primary);
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-normal);
+}
+
+.config-pattern-remove:hover {
+  background: var(--color-error);
+  color: white;
+}
+
+.config-add-pattern-inline {
+  display: inline-flex;
+}

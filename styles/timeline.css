@@ -1,0 +1,206 @@
+/**
+ * Styles de la Timeline/Gantt
+ */
+
+/* ============================================
+   Conteneur Timeline
+   ============================================ */
+.timeline-container {
+  margin: 24px 0;
+  padding: 16px;
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.timeline-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timeline-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--color-gray-700);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  margin-left: 12px;
+}
+
+.timeline-toggle-btn:hover {
+  background: var(--color-gray-200);
+  border-color: var(--color-gray-400);
+}
+
+/* ============================================
+   Chart Timeline
+   ============================================ */
+.timeline-chart,
+#timeline-chart {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: auto;
+  min-height: 200px;
+  padding: 20px 0;
+  transition: height var(--transition-slow);
+}
+
+.timeline-grid {
+  position: relative;
+  display: flex;
+  min-width: 100%;
+  height: 100%;
+}
+
+/* ============================================
+   Marqueurs de dates
+   ============================================ */
+.timeline-dates {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  border-bottom: 2px solid var(--color-gray-300);
+}
+
+.timeline-date-marker {
+  position: absolute;
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-gray-600);
+  font-weight: 500;
+}
+
+.timeline-date-marker.today {
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+  background: var(--color-primary);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.timeline-date-line {
+  position: absolute;
+  top: 30px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-gray-300);
+}
+
+.timeline-date-line.today {
+  width: 2px;
+  background: var(--color-primary);
+  z-index: 5;
+}
+
+/* ============================================
+   Tâches sur la timeline
+   ============================================ */
+.timeline-tasks {
+  position: absolute;
+  top: 35px;
+  left: 0;
+  right: 0;
+}
+
+.timeline-task {
+  position: absolute;
+  height: 18px;
+  width: 80px;
+  background: var(--color-primary);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.timeline-task:hover {
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.5);
+  z-index: 5;
+}
+
+.timeline-task.overdue {
+  background: var(--color-error);
+}
+
+.timeline-task.soon {
+  background: var(--color-warning);
+}
+
+.timeline-task.done {
+  background: var(--color-success);
+}
+
+.timeline-task.no-date {
+  background: var(--color-gray-600);
+  position: relative;
+  left: 0 !important;
+  width: auto !important;
+}
+
+/* ============================================
+   Tooltip Timeline
+   ============================================ */
+.timeline-tooltip {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  white-space: normal;
+  max-width: 250px;
+  word-wrap: break-word;
+  pointer-events: none;
+  z-index: 10000;
+  box-shadow: var(--shadow-lg);
+  animation: tooltipFadeIn 0.2s;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   État vide
+   ============================================ */
+.timeline-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--color-gray-600);
+  font-style: italic;
+}
