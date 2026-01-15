@@ -196,7 +196,7 @@ h1 {
 }
 
 /* ============================================
-   Barre d'outils (stats + actions)
+   Barre d'outils (stats + actions) - STICKY
    ============================================ */
 .stats-bar {
   display: flex;
@@ -206,6 +206,10 @@ h1 {
   background: var(--color-gray-200);
   border-radius: var(--radius-md);
   margin-bottom: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
 }
 
 /* Groupes style ruban */
