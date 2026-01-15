@@ -2,11 +2,10 @@
  * Templates - Chargement et cache de templates HTML
  */
 
+import { templates as bundledTemplates } from '../templates-bundle.js';
+
 // Cache des templates chargés
 const cache = new Map();
-
-// Cache des chargements en cours
-const loading = new Map();
 
 /**
  * Charge un template HTML
@@ -19,32 +18,14 @@ export async function load(name) {
     return cache.get(name);
   }
 
-  // Chargement en cours
-  if (loading.has(name)) {
-    return loading.get(name);
+  // Chercher dans le bundle
+  const template = bundledTemplates[name];
+  if (!template) {
+    throw new Error(`Template non trouvé: ${name}`);
   }
 
-  const path = `templates/${name}.html`;
-
-  const promise = fetch(path)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Template non trouvé: ${path}`);
-      }
-      return response.text();
-    })
-    .then(html => {
-      cache.set(name, html);
-      loading.delete(name);
-      return html;
-    })
-    .catch(err => {
-      loading.delete(name);
-      throw err;
-    });
-
-  loading.set(name, promise);
-  return promise;
+  cache.set(name, template);
+  return template;
 }
 
 /**
