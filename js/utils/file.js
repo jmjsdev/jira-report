@@ -233,10 +233,41 @@ export function downloadJson(data, filename = 'jira-report-data.json') {
  */
 export function readFileAsText(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result);
-    reader.onerror = () => reject(new Error('Erreur lors de la lecture du fichier'));
-    reader.readAsText(file);
+    try {
+      // Log dans localStorage directement car Debug peut ne pas être importé partout
+      const logToStorage = (msg) => {
+        try {
+          const key = 'jira-report-debug-logs';
+          const logs = JSON.parse(localStorage.getItem(key) || '[]');
+          logs.push({ time: new Date().toISOString(), level: 'info', message: msg });
+          localStorage.setItem(key, JSON.stringify(logs.slice(-500)));
+        } catch (e) { /* ignore */ }
+      };
+
+      logToStorage('readFileAsText: Creating FileReader');
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        logToStorage('readFileAsText: onload fired, result length: ' + (e.target.result?.length || 0));
+        resolve(e.target.result);
+      };
+
+      reader.onerror = (e) => {
+        logToStorage('readFileAsText: onerror fired: ' + (reader.error?.message || 'unknown'));
+        reject(new Error('Erreur lors de la lecture du fichier: ' + (reader.error?.message || 'unknown')));
+      };
+
+      reader.onabort = () => {
+        logToStorage('readFileAsText: onabort fired');
+        reject(new Error('Lecture du fichier annulée'));
+      };
+
+      logToStorage('readFileAsText: Calling readAsText on file: ' + file.name);
+      reader.readAsText(file);
+      logToStorage('readFileAsText: readAsText called, waiting for callback');
+    } catch (err) {
+      reject(new Error('Erreur FileReader: ' + err.message));
+    }
   });
 }
 

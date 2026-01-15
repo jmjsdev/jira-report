@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jira Report - Debug Logs</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a1a2e;
+      color: #0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { color: #ff0; margin-bottom: 10px; }
+    .info { color: #888; margin-bottom: 20px; }
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover { background: #444; }
+    #logs {
+      background: #0a0a15;
+      border: 1px solid #333;
+      padding: 15px;
+      max-height: 70vh;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-entry { margin: 2px 0; }
+    .log-info { color: #0f0; }
+    .log-warn { color: #fa0; }
+    .log-error { color: #f55; }
+    .log-success { color: #5f5; }
+    .empty { color: #888; font-style: italic; }
+  </style>
+</head>
+<body>
+  <h1>Jira Report - Debug Logs</h1>
+  <p class="info">Cette page affiche les logs de debug stockés dans localStorage.<br>
+  Utilisez-la pour diagnostiquer les problèmes si l'application principale plante.</p>
+
+  <div class="controls">
+    <button onclick="loadLogs()">Rafraîchir</button>
+    <button onclick="clearLogs()">Effacer les logs</button>
+    <button onclick="exportLogs()">Exporter (.log)</button>
+    <button onclick="copyLogs()">Copier dans le presse-papier</button>
+  </div>
+
+  <div id="logs"></div>
+
+  <script>
+    const STORAGE_KEY = 'jira-report-debug-logs';
+
+    function loadLogs() {
+      const logsEl = document.getElementById('logs');
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) {
+          logsEl.innerHTML = '<span class="empty">Aucun log disponible</span>';
+          return;
+        }
+
+        const logs = JSON.parse(stored);
+        if (logs.length === 0) {
+          logsEl.innerHTML = '<span class="empty">Aucun log disponible</span>';
+          return;
+        }
+
+        logsEl.innerHTML = logs.map(log => {
+          const levelClass = 'log-' + (log.level || 'info');
+          const time = log.timestamp || log.time || '';
+          return `<div class="log-entry ${levelClass}">[${time}] ${(log.level || 'INFO').toUpperCase()}: ${log.message || ''}</div>`;
+        }).join('');
+
+        logsEl.scrollTop = logsEl.scrollHeight;
+      } catch (e) {
+        logsEl.innerHTML = '<span class="log-error">Erreur de lecture: ' + e.message + '</span>';
+      }
+    }
+
+    function clearLogs() {
+      if (confirm('Effacer tous les logs ?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        loadLogs();
+      }
+    }
+
+    function exportLogs() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const logs = stored ? JSON.parse(stored) : [];
+
+        const content = logs.map(log =>
+          `[${log.timestamp || log.time}] ${(log.level || 'INFO').toUpperCase()}: ${log.message}`
+        ).join('\n');
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'jira-report-debug-' + new Date().toISOString().slice(0, 10) + '.log';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Export échoué: ' + e.message);
+      }
+    }
+
+    function copyLogs() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const logs = stored ? JSON.parse(stored) : [];
+
+        const content = logs.map(log =>
+          `[${log.timestamp || log.time}] ${(log.level || 'INFO').toUpperCase()}: ${log.message}`
+        ).join('\n');
+
+        navigator.clipboard.writeText(content).then(() => {
+          alert('Logs copiés !');
+        }).catch(err => {
+          alert('Copie échouée: ' + err.message);
+        });
+      } catch (e) {
+        alert('Erreur: ' + e.message);
+      }
+    }
+
+    // Charger au démarrage
+    loadLogs();
+
+    // Auto-refresh toutes les 2 secondes
+    setInterval(loadLogs, 2000);
+  </script>
+</body>
+</html>

@@ -34,6 +34,7 @@ echo "2. Copie des fichiers..."
 
 # Copier les fichiers nécessaires
 cp index.html "${BUILD_DIR}/"
+cp debug.html "${BUILD_DIR}/"
 cp -r styles "${BUILD_DIR}/"
 cp -r vendors "${BUILD_DIR}/"
 

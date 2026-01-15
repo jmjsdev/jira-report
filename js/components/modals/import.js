@@ -2,6 +2,7 @@
  * Composant Modal Import - Import XML JIRA
  */
 
+import { Debug } from '../../utils/debug.js';
 import { State } from '../../state.js';
 import { Config } from '../../config.js';
 import { UserConfig } from '../../services/user-config.js';
@@ -153,10 +154,16 @@ class ImportModalComponent {
     // Input fichier
     const fileInput = $('#import-file-input', this._element);
     fileInput?.addEventListener('change', async (e) => {
-      if (e.target.files.length > 0) {
-        await this._handleFileDrop(e.target.files);
+      Debug.log('File input change event');
+      try {
+        if (e.target.files && e.target.files.length > 0) {
+          Debug.log('File selected: ' + e.target.files[0].name);
+          await this._handleFileDrop(e.target.files);
+        }
+        e.target.value = ''; // Reset pour pouvoir recharger le même fichier
+      } catch (err) {
+        Debug.error('File input error: ' + err.message);
       }
-      e.target.value = ''; // Reset pour pouvoir recharger le même fichier
     });
 
     // Bouton analyser
@@ -238,23 +245,39 @@ class ImportModalComponent {
    * Gère le drop de fichier
    */
   async _handleFileDrop(files) {
-    if (files.length === 0) return;
+    Debug.log('_handleFileDrop START');
+
+    if (!files || files.length === 0) {
+      Debug.warn('No files provided');
+      return;
+    }
 
     const file = files[0];
+    Debug.log('Processing file: ' + file.name + ' (' + file.type + ', ' + file.size + ' bytes)');
+
     if (!isXmlFile(file)) {
+      Debug.warn('File is not XML');
       this._setStatus('❌ Le fichier doit être au format XML', 'error');
       return;
     }
 
     try {
+      Debug.log('Reading file content...');
       const content = await readFileAsText(file);
+      Debug.log('File read OK, length: ' + content.length);
+
       const xmlInput = $('#import-xml-input', this._element);
       if (xmlInput) {
+        Debug.log('Setting textarea value...');
         xmlInput.value = content;
+        Debug.log('Textarea value set OK');
       }
-      // Analyser automatiquement
+
+      Debug.log('Starting analysis...');
       this._analyze();
+      Debug.success('_handleFileDrop COMPLETE');
     } catch (err) {
+      Debug.error('_handleFileDrop FAILED: ' + err.message);
       this._setStatus('❌ ' + err.message, 'error');
     }
   }
@@ -263,20 +286,28 @@ class ImportModalComponent {
    * Analyse le XML
    */
   _analyze() {
+    Debug.log('_analyze START');
+
     const xmlInput = $('#import-xml-input', this._element);
-    const xmlContent = xmlInput?.value.trim();
+    const xmlContent = xmlInput?.value?.trim();
 
     if (!xmlContent) {
+      Debug.warn('No XML content');
       this._setStatus('⚠️ Veuillez coller le contenu XML', 'error');
       return;
     }
 
+    Debug.log('XML content length: ' + xmlContent.length);
+
     try {
       this._setStatus('⏳ Analyse en cours...', '');
 
+      Debug.log('Parsing XML...');
       const tickets = parseJiraXml(xmlContent);
+      Debug.log('Parsed ' + tickets.length + ' tickets');
 
       if (tickets.length === 0) {
+        Debug.warn('No tickets found in XML');
         this._setStatus('⚠️ Aucun ticket trouvé dans le XML', 'error');
         return;
       }
@@ -284,15 +315,18 @@ class ImportModalComponent {
       // Stocker les tickets pour l'import
       this._parsedTickets = tickets;
 
-      // Comparer avec les tickets existants
+      Debug.log('Comparing with existing tasks...');
       const comparison = compareTickets(tickets, State.tasks);
+      Debug.log('New: ' + comparison.new.length + ', Existing: ' + comparison.existing.length);
 
-      // Afficher les résultats
+      Debug.log('Displaying results...');
       this._displayResults(comparison);
 
       this._setStatus(`✓ ${tickets.length} tickets analysés`, 'success');
+      Debug.success('_analyze COMPLETE');
 
     } catch (err) {
+      Debug.error('_analyze FAILED: ' + err.message);
       this._setStatus('❌ ' + err.message, 'error');
       this._hideResults();
     }

@@ -7,6 +7,7 @@
  * - Filtres, timeline, rapports
  */
 
+import { Debug } from './utils/debug.js';
 import { State } from './state.js';
 import { Storage } from './services/storage.js';
 import { Sidebar } from './components/sidebar.js';
@@ -20,6 +21,9 @@ import { EditTaskModal } from './components/modals/edit-task.js';
 import { isFileSystemAccessSupported } from './utils/file.js';
 import { $ } from './utils/dom.js';
 
+// Initialiser le debug en premier
+Debug.init();
+
 class JiraReportApp {
   constructor() {
     this._initialized = false;
@@ -31,44 +35,65 @@ class JiraReportApp {
   async init() {
     if (this._initialized) return;
 
-    console.log('Jira Report App - Initialisation...');
+    Debug.log('App.init() START');
 
-    // Initialiser les composants
-    Stats.init('#stats');
-    Sidebar.init('#filters');
-    Timeline.init('#timeline-container');
-    TaskTable.init('#projects-container');
-    ImportModal.init('#import-modal');
-    ReportModal.init('#report-modal');
-    ConfigModal.init('#config-modal');
-    EditTaskModal.init('#edit-task-modal');
+    try {
+      // Initialiser les composants un par un avec logging
+      Debug.log('Initializing Stats...');
+      Stats.init('#stats');
 
-    // Attacher les raccourcis clavier
-    this._attachKeyboardShortcuts();
+      Debug.log('Initializing Sidebar...');
+      Sidebar.init('#filters');
 
-    // Attacher les événements personnalisés
-    this._attachCustomEvents();
+      Debug.log('Initializing Timeline...');
+      Timeline.init('#timeline-container');
 
-    // Attacher le drag & drop global
-    this._attachGlobalDragDrop();
+      Debug.log('Initializing TaskTable...');
+      TaskTable.init('#projects-container');
 
-    // Attacher les événements de beforeunload
-    this._attachBeforeUnload();
+      Debug.log('Initializing ImportModal...');
+      ImportModal.init('#import-modal');
 
-    // Mettre à jour l'indicateur de support File System API
-    this._updateFileSystemIndicator();
+      Debug.log('Initializing ReportModal...');
+      ReportModal.init('#report-modal');
 
-    // Souscrire aux changements d'état pour l'indicateur de modifications
-    State.subscribe('unsavedChanges', () => this._updateUnsavedIndicator());
+      Debug.log('Initializing ConfigModal...');
+      ConfigModal.init('#config-modal');
 
-    // Tenter de recharger le dernier fichier ouvert
-    await this._tryAutoLoadLastFile();
+      Debug.log('Initializing EditTaskModal...');
+      EditTaskModal.init('#edit-task-modal');
 
-    // Activer le live save (sauvegarde automatique)
-    Storage.enableLiveSave();
+      Debug.log('Attaching keyboard shortcuts...');
+      this._attachKeyboardShortcuts();
 
-    this._initialized = true;
-    console.log('Jira Report App - Initialisé');
+      Debug.log('Attaching custom events...');
+      this._attachCustomEvents();
+
+      Debug.log('Attaching drag & drop...');
+      this._attachGlobalDragDrop();
+
+      Debug.log('Attaching beforeunload...');
+      this._attachBeforeUnload();
+
+      Debug.log('Updating FS indicator...');
+      this._updateFileSystemIndicator();
+
+      Debug.log('Subscribing to state changes...');
+      State.subscribe('unsavedChanges', () => this._updateUnsavedIndicator());
+
+      Debug.log('Attempting auto-load...');
+      await this._tryAutoLoadLastFile();
+
+      Debug.log('Enabling live save...');
+      Storage.enableLiveSave();
+
+      this._initialized = true;
+      Debug.success('App.init() COMPLETE');
+    } catch (err) {
+      Debug.error('App.init() FAILED: ' + err.message);
+      Debug.show(); // Afficher le panneau de debug
+      throw err;
+    }
   }
 
   /**
