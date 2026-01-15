@@ -13,6 +13,7 @@ class TaskTableComponent {
     this._element = null;
     this._unsubscribers = [];
     this._sortState = {}; // { tableId: { key: 'title', dir: 'asc' } }
+    this._selectedKeys = new Set(); // Tickets sélectionnés pour batch
   }
 
   /**
@@ -41,6 +42,149 @@ class TaskTableComponent {
     } else {
       this._renderByDate();
     }
+    this._updateBatchToolbar();
+  }
+
+  /**
+   * Rend la toolbar de batch editing (sticky)
+   */
+  _renderBatchToolbar() {
+    let toolbar = document.getElementById('batch-toolbar');
+    if (!toolbar) {
+      toolbar = document.createElement('div');
+      toolbar.id = 'batch-toolbar';
+      toolbar.className = 'batch-toolbar';
+      toolbar.innerHTML = `
+        <div class="batch-toolbar-content">
+          <span class="batch-count"><span id="batch-selected-count">0</span> ticket(s) sélectionné(s)</span>
+          <div class="batch-actions">
+            <select id="batch-field" class="batch-select">
+              <option value="">-- Champ à modifier --</option>
+              <option value="dueDate">Date d'échéance</option>
+              <option value="project">Projet</option>
+              <option value="reporter">Rapporteur</option>
+              <option value="status">Statut</option>
+              <option value="priority">Priorité</option>
+            </select>
+            <input type="text" id="batch-value" class="batch-input" placeholder="Nouvelle valeur...">
+            <button id="batch-apply" class="batch-btn batch-btn-apply">Appliquer</button>
+            <button id="batch-clear" class="batch-btn batch-btn-clear">Désélectionner</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(toolbar);
+      this._attachBatchListeners(toolbar);
+    }
+    return toolbar;
+  }
+
+  /**
+   * Met à jour la toolbar de batch
+   */
+  _updateBatchToolbar() {
+    const toolbar = this._renderBatchToolbar();
+    const count = this._selectedKeys.size;
+    const countEl = document.getElementById('batch-selected-count');
+    if (countEl) countEl.textContent = count;
+
+    if (count > 0) {
+      toolbar.classList.add('show');
+    } else {
+      toolbar.classList.remove('show');
+    }
+  }
+
+  /**
+   * Attache les listeners de la toolbar batch
+   */
+  _attachBatchListeners(toolbar) {
+    const fieldSelect = document.getElementById('batch-field');
+    const valueInput = document.getElementById('batch-value');
+    const applyBtn = document.getElementById('batch-apply');
+    const clearBtn = document.getElementById('batch-clear');
+
+    // Changer le type d'input selon le champ
+    fieldSelect?.addEventListener('change', () => {
+      const field = fieldSelect.value;
+      if (field === 'dueDate') {
+        valueInput.type = 'date';
+        valueInput.placeholder = '';
+      } else if (field === 'priority') {
+        valueInput.type = 'text';
+        valueInput.placeholder = 'Highest, High, Medium, Low, Lowest';
+      } else if (field === 'status') {
+        valueInput.type = 'text';
+        valueInput.placeholder = 'Open, In Progress, Done...';
+      } else {
+        valueInput.type = 'text';
+        valueInput.placeholder = 'Nouvelle valeur...';
+      }
+    });
+
+    applyBtn?.addEventListener('click', () => this._applyBatchEdit());
+    clearBtn?.addEventListener('click', () => this._clearSelection());
+  }
+
+  /**
+   * Applique la modification batch
+   */
+  _applyBatchEdit() {
+    const field = document.getElementById('batch-field')?.value;
+    const value = document.getElementById('batch-value')?.value;
+
+    if (!field) {
+      alert('Sélectionnez un champ à modifier');
+      return;
+    }
+
+    if (this._selectedKeys.size === 0) {
+      alert('Aucun ticket sélectionné');
+      return;
+    }
+
+    const updates = {};
+    if (field === 'dueDate') {
+      updates.dueDate = value ? new Date(value).toISOString() : null;
+    } else if (field === 'project') {
+      updates.project = value;
+    } else if (field === 'reporter') {
+      updates.reporter = value;
+    } else if (field === 'status') {
+      updates.status = value;
+    } else if (field === 'priority') {
+      updates.priority = value;
+      // Mettre à jour les infos de priorité
+      const priorityMap = {
+        'Highest': { value: 5, text: 'Critique', class: 'critical' },
+        'High': { value: 4, text: 'Haute', class: 'high' },
+        'Medium': { value: 3, text: 'Moyenne', class: 'medium' },
+        'Low': { value: 2, text: 'Basse', class: 'low' },
+        'Lowest': { value: 1, text: 'Minimale', class: 'lowest' }
+      };
+      const pInfo = priorityMap[value] || { value: 3, text: value, class: 'medium' };
+      updates.priorityValue = pInfo.value;
+      updates.priorityText = pInfo.text;
+      updates.priorityCssClass = pInfo.class;
+    }
+
+    // Appliquer à tous les tickets sélectionnés
+    this._selectedKeys.forEach(key => {
+      State.updateTask(key, updates);
+    });
+
+    // Vider la sélection
+    this._clearSelection();
+  }
+
+  /**
+   * Vide la sélection
+   */
+  _clearSelection() {
+    this._selectedKeys.clear();
+    this._updateBatchToolbar();
+    // Décocher toutes les checkboxes
+    this._element?.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = false);
+    this._element?.querySelectorAll('.select-all-checkbox').forEach(cb => cb.checked = false);
   }
 
   /**
@@ -107,6 +251,7 @@ class TaskTableComponent {
       <table class="tasks-table" data-sortable="true" data-table-id="${tableId}">
         <thead>
           <tr>
+            <th class="col-select"><input type="checkbox" class="select-all-checkbox" data-table-id="${tableId}" title="Tout sélectionner"></th>
             <th class="col-key" data-sort="key">Clé<span class="sort-indicator"></span></th>
             <th class="col-title" data-sort="title">Titre<span class="sort-indicator"></span></th>
             <th class="col-project" data-sort="project">Projet<span class="sort-indicator"></span></th>
@@ -194,6 +339,9 @@ class TaskTableComponent {
           data-person="${escapeAttr(task.reporter || '')}"
           data-project="${escapeAttr(task.project || '')}"
           data-status="${statusKey}">
+        <td class="task-select">
+          <input type="checkbox" class="task-checkbox" data-key="${escapeAttr(taskKey)}" ${this._selectedKeys.has(taskKey) ? 'checked' : ''}>
+        </td>
         <td class="task-key">
           ${jiraUrl ? `<a href="${jiraUrl}" target="_blank" class="task-key-link">${escapeAttr(taskKey)}</a>` : escapeAttr(taskKey)}
         </td>
@@ -239,6 +387,33 @@ class TaskTableComponent {
     // Délégation pour le tri des colonnes
     delegate(this._element, 'click', 'th[data-sort]', (e, th) => {
       this._handleSort(th);
+    });
+
+    // Checkbox individuelle
+    delegate(this._element, 'change', '.task-checkbox', (e, cb) => {
+      const key = cb.dataset.key;
+      if (cb.checked) {
+        this._selectedKeys.add(key);
+      } else {
+        this._selectedKeys.delete(key);
+      }
+      this._updateBatchToolbar();
+    });
+
+    // Checkbox "tout sélectionner"
+    delegate(this._element, 'change', '.select-all-checkbox', (e, cb) => {
+      const table = cb.closest('table');
+      const checkboxes = table?.querySelectorAll('.task-checkbox') || [];
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = cb.checked;
+        const key = checkbox.dataset.key;
+        if (cb.checked) {
+          this._selectedKeys.add(key);
+        } else {
+          this._selectedKeys.delete(key);
+        }
+      });
+      this._updateBatchToolbar();
     });
 
     // Double-clic sur une ligne pour éditer le ticket

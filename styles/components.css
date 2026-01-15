@@ -639,3 +639,114 @@
   font-style: italic;
 }
 
+/* ============================================
+   Batch Toolbar (sticky)
+   ============================================ */
+.batch-toolbar {
+  position: fixed;
+  bottom: -80px;
+  left: 0;
+  right: 0;
+  background: var(--color-primary);
+  color: white;
+  padding: 12px 20px;
+  z-index: 1000;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  transition: bottom 0.3s ease;
+}
+
+.batch-toolbar.show {
+  bottom: 0;
+}
+
+.batch-toolbar-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.batch-count {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.batch-select {
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  background: white;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.batch-input {
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  width: 200px;
+  background: white;
+  color: var(--color-text);
+}
+
+.batch-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.batch-btn-apply {
+  background: white;
+  color: var(--color-primary);
+}
+
+.batch-btn-apply:hover {
+  background: var(--color-gray-200);
+}
+
+.batch-btn-clear {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+}
+
+.batch-btn-clear:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Colonne select */
+.tasks-table th.col-select {
+  width: 30px;
+  text-align: center;
+  cursor: default;
+}
+
+.tasks-table th.col-select:hover {
+  background-color: var(--color-bg-alt);
+}
+
+.task-select {
+  text-align: center;
+}
+
+.task-checkbox,
+.select-all-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
