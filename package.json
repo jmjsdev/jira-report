@@ -4,8 +4,8 @@
   "description": "Application de suivi de tickets JIRA - Pure HTML/JS",
   "scripts": {
     "build": "npm run build:js && npm run build:css",
-    "build:js": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020",
-    "build:css": "esbuild styles/index.css --bundle --outfile=styles/app.bundle.css",
+    "build:js": "esbuild js/app.js --bundle --minify --outfile=js/app.bundle.js --format=iife --target=es2020",
+    "build:css": "esbuild styles/index.css --bundle --minify --outfile=styles/app.bundle.css",
     "watch": "npm run watch:js & npm run watch:css",
     "watch:js": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020 --watch",
     "watch:css": "esbuild styles/index.css --bundle --outfile=styles/app.bundle.css --watch"
