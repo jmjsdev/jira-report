@@ -38,9 +38,9 @@ class JiraReportApp {
     Debug.log('App.init() START');
 
     try {
-      // Initialiser les composants un par un avec logging
+      // Initialiser les composants un par un avec logging (async pour les templates)
       Debug.log('Initializing Stats...');
-      Stats.init('#stats');
+      await Stats.init('#stats');
 
       Debug.log('Initializing Sidebar...');
       Sidebar.init('#filters');
@@ -52,16 +52,16 @@ class JiraReportApp {
       TaskTable.init('#projects-container');
 
       Debug.log('Initializing ImportModal...');
-      ImportModal.init('#import-modal');
+      await ImportModal.init('#import-modal');
 
       Debug.log('Initializing ReportModal...');
-      ReportModal.init('#report-modal');
+      await ReportModal.init('#report-modal');
 
       Debug.log('Initializing ConfigModal...');
-      ConfigModal.init('#config-modal');
+      await ConfigModal.init('#config-modal');
 
       Debug.log('Initializing EditTaskModal...');
-      EditTaskModal.init('#edit-task-modal');
+      await EditTaskModal.init('#edit-task-modal');
 
       Debug.log('Attaching keyboard shortcuts...');
       this._attachKeyboardShortcuts();
