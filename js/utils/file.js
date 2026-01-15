@@ -1,14 +1,33 @@
 /**
  * Utilitaires pour la gestion des fichiers
  * Utilise l'API File System Access pour la sauvegarde directe
+ *
+ * Note: Dans les environnements d'entreprise (Edge managé), certaines APIs
+ * peuvent être bloquées par politique. Ce module gère ces cas gracieusement.
  */
 
+// Flag pour désactiver File System Access si détecté comme bloqué
+let _fileSystemAccessBlocked = false;
+
+// Flag pour désactiver IndexedDB si détecté comme bloqué
+let _indexedDBBlocked = false;
+
 /**
- * Vérifie si l'API File System Access est disponible
+ * Vérifie si l'API File System Access est disponible et fonctionnelle
  * @returns {boolean}
  */
 export function isFileSystemAccessSupported() {
+  if (_fileSystemAccessBlocked) return false;
   return 'showOpenFilePicker' in window && 'showSaveFilePicker' in window;
+}
+
+/**
+ * Vérifie si IndexedDB est disponible et fonctionnel
+ * @returns {boolean}
+ */
+export function isIndexedDBSupported() {
+  if (_indexedDBBlocked) return false;
+  return 'indexedDB' in window;
 }
 
 /**
@@ -21,19 +40,30 @@ export async function openJsonFile() {
     return openJsonFileFallback();
   }
 
-  const [handle] = await window.showOpenFilePicker({
-    types: [{
-      description: 'Fichiers JSON',
-      accept: { 'application/json': ['.json'] }
-    }],
-    multiple: false
-  });
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{
+        description: 'Fichiers JSON',
+        accept: { 'application/json': ['.json'] }
+      }],
+      multiple: false
+    });
 
-  const file = await handle.getFile();
-  const text = await file.text();
-  const content = JSON.parse(text);
+    const file = await handle.getFile();
+    const text = await file.text();
+    const content = JSON.parse(text);
 
-  return { handle, content };
+    return { handle, content };
+  } catch (err) {
+    // Si l'API est bloquée par politique d'entreprise, utiliser le fallback
+    if (err.name === 'SecurityError' || err.name === 'NotAllowedError' ||
+        err.message?.includes('blocked') || err.message?.includes('policy')) {
+      console.warn('File System Access API bloquée, utilisation du fallback');
+      _fileSystemAccessBlocked = true;
+      return openJsonFileFallback();
+    }
+    throw err;
+  }
 }
 
 /**
@@ -75,18 +105,29 @@ export async function openXmlFile() {
     return openXmlFileFallback();
   }
 
-  const [handle] = await window.showOpenFilePicker({
-    types: [{
-      description: 'Fichiers XML',
-      accept: { 'application/xml': ['.xml'], 'text/xml': ['.xml'] }
-    }],
-    multiple: false
-  });
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{
+        description: 'Fichiers XML',
+        accept: { 'application/xml': ['.xml'], 'text/xml': ['.xml'] }
+      }],
+      multiple: false
+    });
 
-  const file = await handle.getFile();
-  const content = await file.text();
+    const file = await handle.getFile();
+    const content = await file.text();
 
-  return { handle, content };
+    return { handle, content };
+  } catch (err) {
+    // Si l'API est bloquée par politique d'entreprise, utiliser le fallback
+    if (err.name === 'SecurityError' || err.name === 'NotAllowedError' ||
+        err.message?.includes('blocked') || err.message?.includes('policy')) {
+      console.warn('File System Access API bloquée, utilisation du fallback');
+      _fileSystemAccessBlocked = true;
+      return openXmlFileFallback();
+    }
+    throw err;
+  }
 }
 
 /**
@@ -142,16 +183,28 @@ export async function saveAsJsonFile(data, suggestedName = 'jira-report-data.jso
     return null;
   }
 
-  const handle = await window.showSaveFilePicker({
-    suggestedName,
-    types: [{
-      description: 'Fichiers JSON',
-      accept: { 'application/json': ['.json'] }
-    }]
-  });
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName,
+      types: [{
+        description: 'Fichiers JSON',
+        accept: { 'application/json': ['.json'] }
+      }]
+    });
 
-  await saveToHandle(handle, data);
-  return handle;
+    await saveToHandle(handle, data);
+    return handle;
+  } catch (err) {
+    // Si l'API est bloquée par politique d'entreprise, utiliser le téléchargement
+    if (err.name === 'SecurityError' || err.name === 'NotAllowedError' ||
+        err.message?.includes('blocked') || err.message?.includes('policy')) {
+      console.warn('File System Access API bloquée, utilisation du téléchargement');
+      _fileSystemAccessBlocked = true;
+      downloadJson(data, suggestedName);
+      return null;
+    }
+    throw err;
+  }
 }
 
 /**
@@ -234,17 +287,52 @@ const STORE_NAME = 'file-handles';
  */
 function openDatabase() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    // Vérifier si IndexedDB est disponible
+    if (!isIndexedDBSupported()) {
+      reject(new Error('IndexedDB non disponible'));
+      return;
+    }
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
+    try {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
+      // Timeout de sécurité (certains environnements bloquent silencieusement)
+      const timeout = setTimeout(() => {
+        _indexedDBBlocked = true;
+        reject(new Error('IndexedDB timeout - probablement bloqué'));
+      }, 3000);
+
+      request.onerror = () => {
+        clearTimeout(timeout);
+        // Marquer IndexedDB comme bloqué si erreur de sécurité
+        if (request.error?.name === 'SecurityError' ||
+            request.error?.message?.includes('blocked')) {
+          _indexedDBBlocked = true;
+        }
+        reject(request.error);
+      };
+
+      request.onsuccess = () => {
+        clearTimeout(timeout);
+        resolve(request.result);
+      };
+
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      };
+
+      request.onblocked = () => {
+        clearTimeout(timeout);
+        _indexedDBBlocked = true;
+        reject(new Error('IndexedDB bloqué'));
+      };
+    } catch (err) {
+      _indexedDBBlocked = true;
+      reject(err);
+    }
   });
 }
 
@@ -254,7 +342,7 @@ function openDatabase() {
  * @returns {Promise<void>}
  */
 export async function saveFileHandle(handle) {
-  if (!handle) return;
+  if (!handle || !isIndexedDBSupported()) return;
 
   try {
     const db = await openDatabase();
@@ -267,6 +355,7 @@ export async function saveFileHandle(handle) {
     });
     db.close();
   } catch (err) {
+    // Silencieux - la fonctionnalité n'est pas critique
     console.warn('Impossible de sauvegarder le file handle:', err);
   }
 }
@@ -276,6 +365,8 @@ export async function saveFileHandle(handle) {
  * @returns {Promise<FileSystemFileHandle|null>}
  */
 export async function getStoredFileHandle() {
+  if (!isIndexedDBSupported()) return null;
+
   try {
     const db = await openDatabase();
     const tx = db.transaction(STORE_NAME, 'readonly');
@@ -290,6 +381,7 @@ export async function getStoredFileHandle() {
     db.close();
     return handle || null;
   } catch (err) {
+    // Silencieux - la fonctionnalité n'est pas critique
     console.warn('Impossible de récupérer le file handle:', err);
     return null;
   }
@@ -300,6 +392,8 @@ export async function getStoredFileHandle() {
  * @returns {Promise<void>}
  */
 export async function clearStoredFileHandle() {
+  if (!isIndexedDBSupported()) return;
+
   try {
     const db = await openDatabase();
     const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -311,6 +405,7 @@ export async function clearStoredFileHandle() {
     });
     db.close();
   } catch (err) {
+    // Silencieux - la fonctionnalité n'est pas critique
     console.warn('Impossible de supprimer le file handle:', err);
   }
 }
@@ -320,21 +415,48 @@ export async function clearStoredFileHandle() {
  * @returns {Promise<{success: boolean, handle?: FileSystemFileHandle, content?: object}>}
  */
 export async function tryLoadLastFile() {
-  if (!isFileSystemAccessSupported()) {
+  // Si File System Access ou IndexedDB sont bloqués, ne pas tenter
+  if (!isFileSystemAccessSupported() || !isIndexedDBSupported()) {
     return { success: false };
   }
 
-  const handle = await getStoredFileHandle();
+  let handle;
+  try {
+    handle = await getStoredFileHandle();
+  } catch (err) {
+    console.warn('Erreur récupération handle:', err);
+    return { success: false };
+  }
+
   if (!handle) {
     return { success: false };
   }
 
   try {
-    // Vérifier/demander la permission
-    const permission = await handle.queryPermission({ mode: 'readwrite' });
+    // Vérifier/demander la permission avec timeout
+    const permissionPromise = handle.queryPermission({ mode: 'readwrite' });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Permission timeout')), 2000)
+    );
+
+    let permission;
+    try {
+      permission = await Promise.race([permissionPromise, timeoutPromise]);
+    } catch (err) {
+      console.warn('Permission check failed:', err);
+      _fileSystemAccessBlocked = true;
+      return { success: false };
+    }
+
     if (permission !== 'granted') {
-      const requestResult = await handle.requestPermission({ mode: 'readwrite' });
-      if (requestResult !== 'granted') {
+      try {
+        const requestResult = await handle.requestPermission({ mode: 'readwrite' });
+        if (requestResult !== 'granted') {
+          return { success: false };
+        }
+      } catch (err) {
+        console.warn('Permission request failed:', err);
+        _fileSystemAccessBlocked = true;
         return { success: false };
       }
     }
@@ -347,7 +469,12 @@ export async function tryLoadLastFile() {
     return { success: true, handle, content, filename: file.name };
   } catch (err) {
     console.warn('Impossible de recharger le fichier:', err);
-    await clearStoredFileHandle();
+    // Ne pas essayer de clear si IndexedDB pose problème
+    try {
+      await clearStoredFileHandle();
+    } catch (e) {
+      // Ignorer
+    }
     return { success: false };
   }
 }

@@ -169,6 +169,7 @@ class StorageService {
 
   /**
    * Tente de recharger le dernier fichier ouvert
+   * Note: Cette fonctionnalité peut être bloquée dans les environnements d'entreprise
    * @returns {Promise<object>} Résultat du chargement
    */
   async tryLoadLastProject() {
@@ -198,7 +199,8 @@ class StorageService {
         taskCount: result.content.tasks.length
       };
     } catch (err) {
-      console.warn('Erreur lors du rechargement automatique:', err);
+      // Échec silencieux - peut arriver dans les environnements d'entreprise
+      console.warn('Erreur lors du rechargement automatique (probablement bloqué par politique):', err);
       return { success: false };
     }
   }

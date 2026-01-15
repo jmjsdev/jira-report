@@ -73,6 +73,7 @@ class JiraReportApp {
 
   /**
    * Tente de recharger automatiquement le dernier fichier
+   * Note: Cette fonctionnalité peut être bloquée dans les environnements d'entreprise
    */
   async _tryAutoLoadLastFile() {
     try {
@@ -82,7 +83,8 @@ class JiraReportApp {
       }
     } catch (err) {
       // Échec silencieux - pas de notification d'erreur
-      console.warn('Auto-load failed:', err);
+      // Cela peut arriver dans les environnements d'entreprise restrictifs
+      console.warn('Auto-load failed (may be blocked by enterprise policy):', err);
     }
   }
 
@@ -363,9 +365,28 @@ class JiraReportApp {
 // Instance globale
 const App = new JiraReportApp();
 
+// Gestionnaire d'erreurs global pour éviter les plantages
+window.addEventListener('error', (e) => {
+  console.error('Erreur globale capturée:', e.error);
+  // Empêcher le plantage complet
+  e.preventDefault();
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('Promise rejetée non gérée:', e.reason);
+  // Empêcher le plantage complet
+  e.preventDefault();
+});
+
 // Initialiser au chargement du DOM
 document.addEventListener('DOMContentLoaded', () => {
-  App.init();
+  try {
+    App.init().catch(err => {
+      console.error('Erreur initialisation async:', err);
+    });
+  } catch (err) {
+    console.error('Erreur initialisation:', err);
+  }
 });
 
 // Exporter pour utilisation éventuelle
