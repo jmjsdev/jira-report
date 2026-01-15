@@ -7,24 +7,29 @@ import { Config } from '../../config.js';
 import { UserConfig } from '../../services/user-config.js';
 import { $, setHtml, addClass, removeClass, escapeAttr, copyToClipboard, copyHtmlToClipboard } from '../../utils/dom.js';
 import { formatDate } from '../../utils/date.js';
+import { Templates } from '../../utils/templates.js';
 
 class ReportModalComponent {
   constructor() {
     this._element = null;
     this._isOpen = false;
     this._currentMode = 'text'; // 'text' ou 'html'
+    this._template = null;
   }
 
   /**
    * Initialise le composant
    * @param {string} selector - Sélecteur du conteneur modal
    */
-  init(selector) {
+  async init(selector) {
     this._element = $(selector);
     if (!this._element) {
       console.error('Report modal container not found:', selector);
       return;
     }
+
+    // Charger le template
+    this._template = await Templates.load('modals/report');
 
     this._render();
     this._attachEventListeners();
@@ -34,43 +39,8 @@ class ReportModalComponent {
    * Rend la structure de la modal
    */
   _render() {
-    setHtml(this._element, `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Rapport des tâches filtrées</h2>
-          <button id="close-report-modal" class="close-modal-btn">✕</button>
-        </div>
-
-        <div class="modal-columns-options">
-          <span class="columns-options-label">Colonnes :</span>
-          <label class="column-checkbox">
-            <input type="checkbox" id="report-col-echeance" checked> Échéance
-          </label>
-          <label class="column-checkbox">
-            <input type="checkbox" id="report-col-statut" checked> Statut
-          </label>
-          <label class="column-checkbox">
-            <input type="checkbox" id="report-col-personne" checked> Rapporteur
-          </label>
-          <label class="column-checkbox">
-            <input type="checkbox" id="report-col-projet" checked> Projet
-          </label>
-          <label class="column-checkbox">
-            <input type="checkbox" id="report-col-jira" checked> JIRA
-          </label>
-        </div>
-
-        <div class="modal-body">
-          <textarea id="report-text-content" readonly></textarea>
-          <div id="report-html-content"></div>
-        </div>
-
-        <div class="modal-footer">
-          <button id="btn-copy-report" class="copy-report-btn">📋 Copier dans le presse-papier</button>
-          <span id="copy-status" class="copy-status"></span>
-        </div>
-      </div>
-    `);
+    if (!this._template) return;
+    setHtml(this._element, this._template);
   }
 
   /**

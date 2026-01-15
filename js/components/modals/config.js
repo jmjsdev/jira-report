@@ -7,24 +7,29 @@ import { UserConfig } from '../../services/user-config.js';
 import { Storage } from '../../services/storage.js';
 import { State } from '../../state.js';
 import { $, $$, setHtml, addClass, removeClass, escapeAttr } from '../../utils/dom.js';
+import { Templates } from '../../utils/templates.js';
 
 class ConfigModalComponent {
   constructor() {
     this._element = null;
     this._isOpen = false;
     this._activeTab = 'tags';
+    this._template = null;
   }
 
   /**
    * Initialise le composant
    * @param {string} selector - Sélecteur du conteneur modal
    */
-  init(selector) {
+  async init(selector) {
     this._element = $(selector);
     if (!this._element) {
       console.error('Config modal container not found:', selector);
       return;
     }
+
+    // Charger le template
+    this._template = await Templates.load('modals/config');
 
     this._render();
     this._attachEventListeners();
@@ -37,84 +42,8 @@ class ConfigModalComponent {
    * Rend la structure de la modal
    */
   _render() {
-    setHtml(this._element, `
-      <div class="modal-content modal-content-large">
-        <div class="modal-header">
-          <h2>⚙️ Configuration</h2>
-          <button id="close-config-modal" class="close-modal-btn">✕</button>
-        </div>
-
-        <div class="config-tabs">
-          <button class="config-tab active" data-tab="tags">🏷️ Tags</button>
-          <button class="config-tab" data-tab="projects">📁 Projets</button>
-          <button class="config-tab" data-tab="blacklist">🚫 Blacklist</button>
-        </div>
-
-        <div class="modal-body">
-          <!-- Onglet Tags -->
-          <div id="tab-tags" class="config-tab-content active">
-            <div class="config-section">
-              <h3>Tags personnalisés</h3>
-              <p class="config-hint">Ajoutez des tags qui apparaîtront dans les filtres même s'ils ne sont pas dans les tickets.</p>
-
-              <div class="config-add-form">
-                <input type="text" id="new-tag-input" placeholder="Nom du tag..." class="config-input">
-                <button id="btn-add-tag" class="config-add-btn">+ Ajouter</button>
-              </div>
-
-              <div id="tag-suggestions" class="config-suggestions"></div>
-
-              <div id="custom-tags-list" class="config-items-list"></div>
-            </div>
-          </div>
-
-          <!-- Onglet Projets -->
-          <div id="tab-projects" class="config-tab-content">
-            <div class="config-section">
-              <h3>Règles de détection de projet</h3>
-              <p class="config-hint">Définissez des mots-clés pour détecter automatiquement le projet d'un ticket depuis son titre.</p>
-
-              <div class="config-add-form">
-                <input type="text" id="new-project-name" placeholder="Nom du projet..." class="config-input" style="width: 150px;">
-                <input type="text" id="new-project-pattern" placeholder="Mot-clé (dans le titre)..." class="config-input">
-                <button id="btn-add-project-rule" class="config-add-btn">+ Ajouter</button>
-              </div>
-
-              <div id="project-suggestions" class="config-suggestions"></div>
-
-              <div id="project-rules-list" class="config-items-list"></div>
-            </div>
-          </div>
-
-          <!-- Onglet Blacklist -->
-          <div id="tab-blacklist" class="config-tab-content">
-            <div class="config-section">
-              <h3>Tickets ignorés</h3>
-              <p class="config-hint">Les tickets dans cette liste seront exclus de l'affichage.</p>
-
-              <div class="config-add-form">
-                <input type="text" id="new-blacklist-key" placeholder="Clé JIRA (ex: PROJ-123)..." class="config-input">
-                <button id="btn-add-blacklist" class="config-add-btn">+ Ajouter</button>
-              </div>
-
-              <div id="blacklist-items" class="config-items-list"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <div class="config-footer-left">
-            <button id="btn-refresh-detection" class="config-refresh-btn">🔄 Appliquer aux tickets</button>
-            <span id="refresh-status" class="config-refresh-status"></span>
-          </div>
-          <div class="config-footer-right">
-            <button id="btn-import-config" class="config-io-btn">📥 Importer</button>
-            <button id="btn-export-config" class="config-io-btn">📤 Exporter</button>
-          </div>
-        </div>
-      </div>
-    `);
-
+    if (!this._template) return;
+    setHtml(this._element, this._template);
     this._refreshContent();
   }
 

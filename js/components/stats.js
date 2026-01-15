@@ -4,23 +4,28 @@
 
 import { State } from '../state.js';
 import { $, setHtml, delegate } from '../utils/dom.js';
+import { Templates } from '../utils/templates.js';
 
 class StatsComponent {
   constructor() {
     this._element = null;
     this._unsubscribers = [];
+    this._template = null;
   }
 
   /**
    * Initialise le composant
    * @param {string} selector - Sélecteur du conteneur
    */
-  init(selector) {
+  async init(selector) {
     this._element = $(selector);
     if (!this._element) {
       console.error('Stats container not found:', selector);
       return;
     }
+
+    // Charger le template
+    this._template = await Templates.load('components/toolbar');
 
     this.render();
     this._attachEventListeners();
@@ -31,75 +36,16 @@ class StatsComponent {
    * Rend la barre
    */
   render() {
+    if (!this._template) return;
+
     const stats = State.getStats();
-    const viewMode = State.viewMode;
+    const html = Templates.interpolate(this._template, {
+      totalTasks: stats.totalTasks,
+      totalProjects: stats.totalProjects
+    });
 
-    setHtml(this._element, `
-      <div class="toolbar-group">
-        <span class="toolbar-group-title">Statistiques</span>
-        <div class="toolbar-group-content">
-          <span class="toolbar-info"><strong>${stats.totalTasks}</strong> tâches</span>
-          <span class="toolbar-info"><strong>${stats.totalProjects}</strong> projets</span>
-        </div>
-      </div>
-
-      <span class="toolbar-sep"></span>
-
-      <div class="toolbar-group">
-        <span class="toolbar-group-title">Fichier</span>
-        <div class="toolbar-group-content">
-          <button id="btn-open" class="toolbar-btn" title="Ouvrir (Ctrl+O)">
-            <span class="btn-icon">📂</span><span class="btn-label">Ouvrir</span>
-          </button>
-          <button id="btn-save" class="toolbar-btn toolbar-btn-primary" title="Sauvegarder (Ctrl+S)">
-            <span class="btn-icon">💾</span><span class="btn-label">Sauver</span>
-          </button>
-          <button id="btn-import-xml" class="toolbar-btn" title="Import XML (Ctrl+I)">
-            <span class="btn-icon">📥</span><span class="btn-label">Import</span>
-          </button>
-          <button id="btn-backup" class="toolbar-btn" title="Télécharger backup">
-            <span class="btn-icon">⬇️</span><span class="btn-label">Backup</span>
-          </button>
-          <button id="btn-clear" class="toolbar-btn toolbar-btn-danger" title="Effacer tous les tickets">
-            <span class="btn-icon">🗑️</span><span class="btn-label">Clear</span>
-          </button>
-        </div>
-      </div>
-
-      <span class="toolbar-sep"></span>
-
-      <div class="toolbar-group">
-        <span class="toolbar-group-title">Affichage</span>
-        <div class="toolbar-group-content">
-          <button id="view-by-project" class="toolbar-btn toolbar-btn-toggle ${viewMode === 'project' ? 'active' : ''}" title="Vue par projet">
-            <span class="btn-icon">📁</span><span class="btn-label">Projet</span>
-          </button>
-          <button id="view-by-date" class="toolbar-btn toolbar-btn-toggle ${viewMode === 'date' ? 'active' : ''}" title="Vue par date">
-            <span class="btn-icon">📅</span><span class="btn-label">Date</span>
-          </button>
-        </div>
-      </div>
-
-      <span class="toolbar-sep"></span>
-
-      <div class="toolbar-group">
-        <span class="toolbar-group-title">Rapport</span>
-        <div class="toolbar-group-content">
-          <button id="btn-report-text" class="toolbar-btn" title="Rapport texte">
-            <span class="btn-icon">📝</span><span class="btn-label">Texte</span>
-          </button>
-          <button id="btn-report-html" class="toolbar-btn" title="Rapport HTML">
-            <span class="btn-icon">🌐</span><span class="btn-label">HTML</span>
-          </button>
-        </div>
-      </div>
-
-      <span class="toolbar-spacer"></span>
-
-      <button id="btn-config" class="toolbar-btn" title="Configuration (Ctrl+,)">
-        <span class="btn-icon">⚙️</span><span class="btn-label">Config</span>
-      </button>
-    `);
+    setHtml(this._element, html);
+    this._updateViewModeButtons();
   }
 
   /**

@@ -11,23 +11,28 @@ import { $, $$, setHtml, addClass, removeClass, escapeAttr } from '../../utils/d
 import { parseJiraXml, compareTickets } from '../../parsers/jira-xml.js';
 import { formatDate } from '../../utils/date.js';
 import { readFileAsText, isXmlFile } from '../../utils/file.js';
+import { Templates } from '../../utils/templates.js';
 
 class ImportModalComponent {
   constructor() {
     this._element = null;
     this._isOpen = false;
+    this._template = null;
   }
 
   /**
    * Initialise le composant
    * @param {string} selector - Sélecteur du conteneur modal
    */
-  init(selector) {
+  async init(selector) {
     this._element = $(selector);
     if (!this._element) {
       console.error('Import modal container not found:', selector);
       return;
     }
+
+    // Charger le template
+    this._template = await Templates.load('modals/import');
 
     this._render();
     this._attachEventListeners();
@@ -37,80 +42,8 @@ class ImportModalComponent {
    * Rend la structure de la modal
    */
   _render() {
-    setHtml(this._element, `
-      <div class="modal-content modal-content-large modal-import">
-        <div class="modal-header">
-          <h2>Import JIRA XML</h2>
-          <button id="close-import-modal" class="close-modal-btn">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="jira-import-instructions">
-            <p>Glissez-déposez un fichier XML ou collez le contenu exporté depuis JIRA.</p>
-            <p class="jira-import-hint">Export depuis JIRA : Filtres → Exporter → XML</p>
-          </div>
-
-          <div class="jira-input-row">
-            <div id="import-dropzone" class="jira-dropzone">
-              <div class="jira-dropzone-content">
-                <span class="jira-dropzone-icon">📄</span>
-                <label class="jira-file-btn">
-                  📁 Parcourir
-                  <input type="file" id="import-file-input" accept=".xml,text/xml,application/xml" class="hidden">
-                </label>
-              </div>
-            </div>
-
-            <textarea id="import-xml-input" class="jira-xml-input"
-                      placeholder="...ou collez le XML JIRA ici"></textarea>
-          </div>
-
-          <div class="jira-import-actions">
-            <button id="btn-analyze-xml" class="analyze-jira-btn">🔍 Analyser</button>
-            <span id="import-status" class="jira-analyze-status"></span>
-            <div id="import-stats" class="jira-import-stats hidden"></div>
-          </div>
-
-          <div id="import-results" class="jira-import-results hidden"></div>
-        </div>
-        <div id="import-actions-final" class="modal-footer import-actions-final hidden">
-          <div class="import-actions-row">
-            <button id="btn-import-add" class="action-btn action-btn-primary">
-              ➕ Ajouter les nouveaux
-            </button>
-            <button id="btn-import-update" class="action-btn action-btn-import">
-              🔄 Mettre à jour les existants
-            </button>
-            <button id="btn-import-replace" class="action-btn action-btn-secondary">
-              ⚠️ Tout remplacer
-            </button>
-          </div>
-          <div id="import-update-options" class="import-update-options hidden">
-            <div class="update-fields-section">
-              <span class="update-options-label">Champs à mettre à jour :</span>
-              <div class="update-options-checkboxes">
-                <label><input type="checkbox" id="update-summary" checked> Titre</label>
-                <label><input type="checkbox" id="update-status" checked> Statut</label>
-                <label><input type="checkbox" id="update-priority" checked> Priorité</label>
-                <label><input type="checkbox" id="update-duedate" checked> Échéance</label>
-                <label><input type="checkbox" id="update-labels"> Labels</label>
-                <label><input type="checkbox" id="update-project"> Projet</label>
-                <label><input type="checkbox" id="update-assignee"> Assigné</label>
-              </div>
-            </div>
-            <div class="update-tickets-section">
-              <div class="update-tickets-header">
-                <span class="update-options-label">Tickets à mettre à jour :</span>
-                <label class="select-all-label"><input type="checkbox" id="update-select-all" checked> Tout sélectionner</label>
-              </div>
-              <div id="update-tickets-list" class="update-tickets-list"></div>
-            </div>
-            <button id="btn-confirm-update" class="action-btn action-btn-primary">
-              ✓ Confirmer la mise à jour
-            </button>
-          </div>
-        </div>
-      </div>
-    `);
+    if (!this._template) return;
+    setHtml(this._element, this._template);
   }
 
   /**

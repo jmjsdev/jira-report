@@ -7,24 +7,29 @@ import { Config } from '../../config.js';
 import { UserConfig } from '../../services/user-config.js';
 import { $, $$, setHtml, addClass, removeClass, escapeAttr } from '../../utils/dom.js';
 import { formatDate } from '../../utils/date.js';
+import { Templates } from '../../utils/templates.js';
 
 class EditTaskModalComponent {
   constructor() {
     this._element = null;
     this._isOpen = false;
     this._currentTaskKey = null;
+    this._template = null;
   }
 
   /**
    * Initialise le composant
    * @param {string} selector - Sélecteur du conteneur modal
    */
-  init(selector) {
+  async init(selector) {
     this._element = $(selector);
     if (!this._element) {
       console.error('Edit task modal container not found:', selector);
       return;
     }
+
+    // Charger le template
+    this._template = await Templates.load('modals/edit-task');
 
     this._render();
     this._attachEventListeners();
@@ -34,75 +39,8 @@ class EditTaskModalComponent {
    * Rend la structure de la modal
    */
   _render() {
-    setHtml(this._element, `
-      <div class="modal-content modal-content-medium">
-        <div class="modal-header">
-          <h2 id="edit-task-title">Edition du ticket</h2>
-          <button id="close-edit-task-modal" class="close-modal-btn">&times;</button>
-        </div>
-
-        <div class="modal-body">
-          <!-- Lien JIRA -->
-          <div class="edit-section">
-            <label>Ticket JIRA</label>
-            <a id="edit-task-jira-link" href="#" target="_blank" class="jira-link"></a>
-          </div>
-
-          <!-- Titre -->
-          <div class="edit-section">
-            <label for="edit-task-summary">Titre</label>
-            <input type="text" id="edit-task-summary" class="edit-input" placeholder="Titre du ticket...">
-          </div>
-
-          <!-- Projet et Statut sur la même ligne -->
-          <div class="edit-section edit-section-row">
-            <div class="edit-field">
-              <label for="edit-task-project">Projet</label>
-              <input type="text" id="edit-task-project" class="edit-input" list="project-list" placeholder="Projet...">
-              <datalist id="project-list"></datalist>
-            </div>
-            <div class="edit-field">
-              <label for="edit-task-status">Statut</label>
-              <select id="edit-task-status" class="edit-input"></select>
-            </div>
-          </div>
-
-          <!-- Date d'échéance -->
-          <div class="edit-section">
-            <label for="edit-task-duedate">Date d'échéance</label>
-            <input type="date" id="edit-task-duedate" class="edit-input">
-            <div class="date-quick-buttons">
-              <button type="button" class="date-quick-btn" data-date="today">Aujourd'hui</button>
-              <button type="button" class="date-quick-btn" data-date="tomorrow">Demain</button>
-              <button type="button" class="date-quick-btn" data-date="+3">J+3</button>
-              <button type="button" class="date-quick-btn" data-date="+7">J+7</button>
-              <button type="button" class="date-quick-btn" data-date="next-monday">Lundi</button>
-              <button type="button" class="date-quick-btn" data-date="end-month">Fin mois</button>
-              <button type="button" class="date-quick-btn date-quick-btn-clear" data-date="clear">✕</button>
-            </div>
-          </div>
-
-          <!-- Labels -->
-          <div class="edit-section">
-            <label>Labels</label>
-            <div id="edit-task-labels" class="edit-labels-container"></div>
-            <div class="edit-add-label">
-              <input type="text" id="edit-new-label" placeholder="Nouveau label..." class="edit-input edit-input-small">
-              <button id="btn-add-label" class="edit-add-btn">+ Ajouter</button>
-            </div>
-            <div class="edit-suggested-labels">
-              <span class="suggested-label-hint">Labels suggérés:</span>
-              <div id="edit-suggested-labels-list"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button id="btn-save-task" class="save-task-btn">Enregistrer</button>
-          <button id="btn-cancel-task" class="cancel-task-btn">Annuler</button>
-        </div>
-      </div>
-    `);
+    if (!this._template) return;
+    setHtml(this._element, this._template);
   }
 
   /**
