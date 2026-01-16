@@ -165,6 +165,12 @@
   width: auto !important;
 }
 
+.timeline-task-key {
+  font-weight: 700;
+  margin-right: 4px;
+  opacity: 0.9;
+}
+
 /* ============================================
    Tooltip Timeline
    ============================================ */

@@ -101,6 +101,14 @@ class SidebarComponent {
           ${this._renderTagFilters(tagCounts)}
         </div>
       </div>
+
+      <!-- Spacer pour pousser le bouton config en bas -->
+      <div class="sidebar-spacer"></div>
+
+      <!-- Config -->
+      <button id="btn-config" class="sidebar-config-btn" title="Configuration (Ctrl+,)">
+        ${icon('settings')} Configuration
+      </button>
     `);
   }
 
@@ -200,6 +208,11 @@ class SidebarComponent {
     delegate(this._element, 'click', '#btn-reset-filters', () => {
       State.resetFilters();
       this.render();
+    });
+
+    // Délégation pour config
+    delegate(this._element, 'click', '#btn-config', () => {
+      document.dispatchEvent(new CustomEvent('app:open-config'));
     });
   }
 

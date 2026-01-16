@@ -177,7 +177,7 @@ class TimelineComponent {
            class="timeline-task ${dueClass} ${doneClass}"
            style="left: ${position}%; top: ${top}px;"
            data-tooltip="${tooltipText}">
-          ${escapeAttr(truncatedTitle)}
+          <span class="timeline-task-key">${escapeAttr(task.key)}</span> ${escapeAttr(truncatedTitle)}
         </a>
       `;
     });
