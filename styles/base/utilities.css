@@ -15,3 +15,22 @@
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
+
+/**
+ * SVG Icons - Inherit color from parent
+ */
+svg {
+  display: inline-block;
+  vertical-align: middle;
+  color: inherit;
+}
+
+.btn-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+button svg,
+a svg {
+  pointer-events: none;
+}

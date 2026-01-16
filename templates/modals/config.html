@@ -1,13 +1,13 @@
 <div class="modal-content modal-content-large">
   <div class="modal-header">
-    <h2>Configuration</h2>
-    <button id="close-config-modal" class="close-modal-btn">X</button>
+    <h2>{{icon:settings}} Configuration</h2>
+    <button id="close-config-modal" class="close-modal-btn">{{icon:x}}</button>
   </div>
 
   <div class="config-tabs">
-    <button class="config-tab active" data-tab="tags">Tags</button>
-    <button class="config-tab" data-tab="projects">Projets</button>
-    <button class="config-tab" data-tab="blacklist">Blacklist</button>
+    <button class="config-tab active" data-tab="tags">{{icon:tag}} Tags</button>
+    <button class="config-tab" data-tab="projects">{{icon:folder}} Projets</button>
+    <button class="config-tab" data-tab="blacklist">{{icon:ban}} Blacklist</button>
   </div>
 
   <div class="modal-body">
@@ -62,12 +62,12 @@
 
   <div class="modal-footer">
     <div class="config-footer-left">
-      <button id="btn-refresh-detection" class="config-refresh-btn">Appliquer aux tickets</button>
+      <button id="btn-refresh-detection" class="config-refresh-btn">{{icon:refresh}} Appliquer aux tickets</button>
       <span id="refresh-status" class="config-refresh-status"></span>
     </div>
     <div class="config-footer-right">
-      <button id="btn-import-config" class="config-io-btn">Importer</button>
-      <button id="btn-export-config" class="config-io-btn">Exporter</button>
+      <button id="btn-import-config" class="config-io-btn">{{icon:upload}} Importer</button>
+      <button id="btn-export-config" class="config-io-btn">{{icon:download}} Exporter</button>
     </div>
   </div>
 </div>

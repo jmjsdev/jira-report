@@ -3,6 +3,7 @@
  */
 
 import { templates as bundledTemplates } from '../templates-bundle.js';
+import { Icons } from './icons.js';
 
 // Cache des templates chargés
 const cache = new Map();
@@ -19,10 +20,15 @@ export async function load(name) {
   }
 
   // Chercher dans le bundle
-  const template = bundledTemplates[name];
+  let template = bundledTemplates[name];
   if (!template) {
     throw new Error(`Template non trouvé: ${name}`);
   }
+
+  // Remplacer les icônes {{icon:name}}
+  template = template.replace(/\{\{icon:(\w+)\}\}/g, (match, iconName) => {
+    return Icons[iconName] || '';
+  });
 
   cache.set(name, template);
   return template;
