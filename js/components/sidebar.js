@@ -41,6 +41,9 @@ class SidebarComponent {
     const statusCounts = State.getStatusCounts();
     const totalTasks = State.tasks.length;
 
+    // Compter les tâches avec statut "done"
+    const doneStatusCount = statusCounts.get('done') || 0;
+
     // Compter les tâches avec label "done"
     const doneLabelsCount = tagCounts.get('done') || 0;
 
@@ -74,11 +77,11 @@ class SidebarComponent {
         <h3>Options</h3>
         <div class="task-labels">
           <button class="filter-btn ${State.filters.showDone ? 'active' : ''}" data-filter="show-done">
-            Afficher terminées <span class="tag-count">${icon('check')}</span>
+            ${State.filters.showDone ? 'Masquer' : 'Afficher'} terminées <span class="tag-count">${doneStatusCount}</span>
           </button>
           ${doneLabelsCount > 0 ? `
             <button class="filter-btn ${State.filters.showLabelDone ? 'active' : ''}" data-filter="label-done">
-              Afficher label done <span class="tag-count">${doneLabelsCount}</span>
+              ${State.filters.showLabelDone ? 'Masquer' : 'Afficher'} label done <span class="tag-count">${doneLabelsCount}</span>
             </button>
           ` : ''}
         </div>
@@ -399,6 +402,13 @@ class SidebarComponent {
       this._attachButtonListeners();
     });
     this._unsubscribers.push(unsubConfig);
+
+    // Re-render quand les filtres changent (pour mettre à jour le texte des boutons)
+    const unsubFilters = State.subscribe('filters', () => {
+      this.render();
+      this._attachButtonListeners();
+    });
+    this._unsubscribers.push(unsubFilters);
   }
 
   /**

@@ -187,11 +187,22 @@ class UserConfigService {
   /**
    * Détecte le projet d'un ticket basé sur son titre
    * Priorité: texte entre crochets [] > reste du titre
+   * Les patterns sont triés par longueur décroissante pour matcher les plus spécifiques d'abord
    */
   detectProjectFromTitle(title) {
     if (!title) return null;
     const titleLower = title.toLowerCase();
     const rules = this._getConfig().projectRules || [];
+
+    // Construire une liste de tous les patterns avec leur projet associé
+    // Triés par longueur décroissante (les plus longs/spécifiques d'abord)
+    const allPatterns = [];
+    for (const rule of rules) {
+      for (const pattern of rule.patterns) {
+        allPatterns.push({ pattern, projectName: rule.name });
+      }
+    }
+    allPatterns.sort((a, b) => b.pattern.length - a.pattern.length);
 
     // Extraire le texte entre crochets
     const bracketMatches = title.match(/\[([^\]]+)\]/g);
@@ -199,23 +210,19 @@ class UserConfigService {
       ? bracketMatches.map(m => m.slice(1, -1).toLowerCase())
       : [];
 
-    // 1. Priorité aux correspondances dans les crochets
-    for (const rule of rules) {
-      for (const pattern of rule.patterns) {
-        for (const bracketText of bracketTexts) {
-          if (bracketText.includes(pattern) || pattern.includes(bracketText)) {
-            return rule.name;
-          }
+    // 1. Priorité aux correspondances dans les crochets (patterns les plus longs d'abord)
+    for (const { pattern, projectName } of allPatterns) {
+      for (const bracketText of bracketTexts) {
+        if (bracketText.includes(pattern) || pattern.includes(bracketText)) {
+          return projectName;
         }
       }
     }
 
-    // 2. Sinon, chercher dans le titre complet
-    for (const rule of rules) {
-      for (const pattern of rule.patterns) {
-        if (titleLower.includes(pattern)) {
-          return rule.name;
-        }
+    // 2. Sinon, chercher dans le titre complet (patterns les plus longs d'abord)
+    for (const { pattern, projectName } of allPatterns) {
+      if (titleLower.includes(pattern)) {
+        return projectName;
       }
     }
 

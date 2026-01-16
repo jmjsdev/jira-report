@@ -1226,6 +1226,35 @@
   color: white;
 }
 
+/* Date picker inline (batch toolbar) */
+.date-picker-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-picker-inline .date-picker-input {
+  padding: 6px 10px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--color-bg);
+}
+
+.date-picker-inline .date-quick-buttons {
+  margin-top: 0;
+  flex-wrap: nowrap;
+}
+
+.date-picker-inline .date-quick-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.date-picker-inline .date-quick-btn-clear {
+  padding: 4px 6px;
+}
+
 .edit-labels-container {
   display: flex;
   flex-wrap: wrap;

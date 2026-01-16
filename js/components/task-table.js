@@ -8,7 +8,7 @@ import { UserConfig } from '../services/user-config.js';
 import { $, setHtml, escapeAttr, delegate } from '../utils/dom.js';
 import { formatDate, getDueClass } from '../utils/date.js';
 import { icon } from '../utils/icons.js';
-import { renderSelect, renderStatusSelect, renderPrioritySelect, STATUS_OPTIONS, PRIORITY_OPTIONS } from '../utils/form.js';
+import { renderSelect, renderPrioritySelect, renderDatePicker, applyQuickDate } from '../utils/form.js';
 
 class TaskTableComponent {
   constructor() {
@@ -113,10 +113,7 @@ class TaskTableComponent {
       const field = fieldSelect.value;
 
       if (field === 'status') {
-        valueContainer.innerHTML = renderStatusSelect({
-          id: 'batch-value',
-          className: 'batch-select'
-        });
+        valueContainer.innerHTML = this._renderStatusSelectFromTasks();
       } else if (field === 'priority') {
         valueContainer.innerHTML = renderPrioritySelect({
           id: 'batch-value',
@@ -125,7 +122,8 @@ class TaskTableComponent {
       } else if (field === 'project') {
         valueContainer.innerHTML = this._renderProjectSelect();
       } else if (field === 'dueDate') {
-        valueContainer.innerHTML = '<input type="date" id="batch-value" class="batch-input">';
+        valueContainer.innerHTML = renderDatePicker({ id: 'batch-value', inline: true });
+        this._attachDatePickerListeners(valueContainer);
       } else {
         valueContainer.innerHTML = '<input type="text" id="batch-value" class="batch-input" placeholder="Nouvelle valeur...">';
       }
@@ -136,14 +134,26 @@ class TaskTableComponent {
   }
 
   /**
-   * Génère le select des projets
+   * Attache les listeners pour le date picker
+   */
+  _attachDatePickerListeners(container) {
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.date-quick-btn');
+      if (btn) {
+        const dateType = btn.dataset.date;
+        const input = container.querySelector('#batch-value');
+        applyQuickDate(dateType, input);
+      }
+    });
+  }
+
+  /**
+   * Génère le select des projets (depuis la config utilisateur)
    */
   _renderProjectSelect() {
-    // Récupérer les projets depuis UserConfig (projets déclarés)
-    const declaredProjects = UserConfig.projectRules;
+    const projectRules = UserConfig.projectRules;
 
-    // Construire la liste des options
-    const options = declaredProjects
+    const options = projectRules
       .sort((a, b) => a.name.localeCompare(b.name))
       .map(rule => ({
         value: rule.name,
@@ -155,6 +165,36 @@ class TaskTableComponent {
       className: 'batch-select',
       options,
       placeholder: '-- Choisir un projet --'
+    });
+  }
+
+  /**
+   * Génère le select des statuts (depuis les tâches existantes)
+   */
+  _renderStatusSelectFromTasks() {
+    // Extraire tous les statuts uniques des tâches
+    const statusMap = new Map();
+    State.tasks.forEach(task => {
+      if (task.statusKey && task.statusLabel) {
+        statusMap.set(task.statusKey, {
+          value: task.statusKey,
+          label: task.statusLabel,
+          iconName: task.statusIconName
+        });
+      }
+    });
+
+    const options = Array.from(statusMap.values())
+      .sort((a, b) => {
+        const order = Config.statusOrder;
+        return (order[a.value] || 99) - (order[b.value] || 99);
+      });
+
+    return renderSelect({
+      id: 'batch-value',
+      className: 'batch-select',
+      options,
+      placeholder: '-- Choisir un statut --'
     });
   }
 
@@ -183,14 +223,14 @@ class TaskTableComponent {
     } else if (field === 'reporter') {
       updates.reporter = value;
     } else if (field === 'status') {
-      // Trouver les infos du statut sélectionné
-      const statusInfo = STATUS_OPTIONS.find(s => s.value === value);
-      if (statusInfo) {
-        updates.statusKey = statusInfo.value;
-        updates.statusLabel = statusInfo.label;
-        updates.statusIconName = statusInfo.iconName;
-        updates.statusCssClass = `status-${statusInfo.value}`;
-        updates.status = statusInfo.label; // Pour la compatibilité
+      // Trouver les infos du statut depuis une tâche existante avec ce statusKey
+      const sampleTask = State.tasks.find(t => t.statusKey === value);
+      if (sampleTask) {
+        updates.statusKey = sampleTask.statusKey;
+        updates.statusLabel = sampleTask.statusLabel;
+        updates.statusIconName = sampleTask.statusIconName;
+        updates.statusCssClass = sampleTask.statusCssClass;
+        updates.status = sampleTask.status;
       }
     } else if (field === 'priority') {
       updates.priority = value;
