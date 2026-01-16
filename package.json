@@ -1,13 +1,14 @@
 {
   "name": "jira-report",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "description": "Application de suivi de tickets JIRA - Pure HTML/JS",
   "scripts": {
-    "build": "npm run build:js && npm run build:css",
-    "build:js": "esbuild js/app.js --bundle --minify --outfile=js/app.bundle.js --format=iife --target=es2020 --loader:.html=text",
+    "build": "npm run build:js && npm run build:css && npm run version:inject",
+    "build:js": "esbuild js/app.js --bundle --minify --outfile=js/app.bundle.js --format=iife --target=es2020 --loader:.html=text --define:__APP_VERSION__=\\\"$(node -p \"require('./package.json').version\")\\\"",
     "build:css": "esbuild styles/index.css --bundle --minify --outfile=styles/app.bundle.css",
+    "version:inject": "node -e \"const fs=require('fs');const v=require('./package.json').version;let h=fs.readFileSync('index.html','utf8');h=h.replace(/(app\\.bundle\\.(js|css))(\\?v=[\\d.]+)?/g,'$1?v='+v);fs.writeFileSync('index.html',h);console.log('Version '+v+' injected')\"",
     "watch": "npm run watch:js & npm run watch:css",
-    "watch:js": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020 --loader:.html=text --watch",
+    "watch:js": "esbuild js/app.js --bundle --outfile=js/app.bundle.js --format=iife --target=es2020 --loader:.html=text --define:__APP_VERSION__=\\\"$(node -p \"require('./package.json').version\")\\\" --watch",
     "watch:css": "esbuild styles/index.css --bundle --outfile=styles/app.bundle.css --watch"
   },
   "keywords": ["jira", "report", "html", "javascript"],

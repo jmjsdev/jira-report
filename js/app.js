@@ -21,6 +21,7 @@ import { EditTaskModal } from './components/modals/edit-task.js';
 import { isFileSystemAccessSupported } from './utils/file.js';
 import { $ } from './utils/dom.js';
 import { icon } from './utils/icons.js';
+import { APP_VERSION } from './config.js';
 
 // Initialiser le debug en premier
 Debug.init();
@@ -340,6 +341,12 @@ class JiraReportApp {
         indicator.innerHTML = icon('alertTriangle') + ' File System Access API non supporté - Mode téléchargement';
         indicator.classList.add('unsupported');
       }
+    }
+
+    // Afficher la version
+    const versionEl = $('#app-version');
+    if (versionEl) {
+      versionEl.textContent = 'v' + APP_VERSION;
     }
   }
 

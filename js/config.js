@@ -3,6 +3,9 @@
  */
 import { icon } from './utils/icons.js';
 
+// Version injectée au build depuis package.json
+export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+
 export const Config = {
   // Mapping des priorités JIRA vers l'application
   priorityMap: {
