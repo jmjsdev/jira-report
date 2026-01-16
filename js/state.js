@@ -25,6 +25,7 @@ class AppState {
       project: 'all',
       person: null,
       tag: null,
+      status: null,
       showDone: true,
       showLabelDone: true,
       search: ''
@@ -154,6 +155,7 @@ class AppState {
       project: 'all',
       person: null,
       tag: null,
+      status: null,
       showDone: true,
       showLabelDone: true,
       search: ''
@@ -235,6 +237,11 @@ class AppState {
       if (this._filters.tag) {
         const taskLabels = (task.labels || []).map(l => l.toLowerCase());
         if (!taskLabels.includes(this._filters.tag)) return false;
+      }
+
+      // Filtre statut
+      if (this._filters.status) {
+        if (task.statusKey !== this._filters.status) return false;
       }
 
       // Filtre terminé
@@ -372,6 +379,23 @@ class AppState {
         });
       }
     });
+    return counts;
+  }
+
+  /**
+   * Compte les tâches par statut (exclut les blacklistés)
+   */
+  getStatusCounts() {
+    const counts = new Map();
+
+    this._tasks.forEach(task => {
+      // Ignorer les tickets blacklistés
+      if (UserConfig.isBlacklisted(task.key)) return;
+
+      const statusKey = task.statusKey || 'backlog';
+      counts.set(statusKey, (counts.get(statusKey) || 0) + 1);
+    });
+
     return counts;
   }
 

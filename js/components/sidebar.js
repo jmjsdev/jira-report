@@ -38,6 +38,7 @@ class SidebarComponent {
     const projectCounts = State.getProjectCounts();
     const { counts: peopleCounts, noPersonCount } = State.getPeopleCounts();
     const tagCounts = State.getTagCounts();
+    const statusCounts = State.getStatusCounts();
     const totalTasks = State.tasks.length;
 
     // Compter les tâches avec label "done"
@@ -61,8 +62,16 @@ class SidebarComponent {
       </div>
 
       <!-- Statut -->
-      <div class="filter-group">
+      <div class="filter-group" data-filter-type="status">
         <h3>Statut</h3>
+        <div class="task-labels">
+          ${this._renderStatusFilters(statusCounts)}
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div class="filter-group" data-filter-type="options">
+        <h3>Options</h3>
         <div class="task-labels">
           <button class="filter-btn ${State.filters.showDone ? 'active' : ''}" data-filter="show-done">
             Afficher terminées <span class="tag-count">${icon('check')}</span>
@@ -172,6 +181,35 @@ class SidebarComponent {
   }
 
   /**
+   * Génère le HTML des filtres de statut
+   */
+  _renderStatusFilters(statusCounts) {
+    const statusLabels = {
+      'backlog': 'Backlog',
+      'inprogress': 'En cours',
+      'review': 'En revue',
+      'ready': 'Prêt',
+      'delivered': 'Livré',
+      'done': 'Terminé'
+    };
+
+    const statusOrder = ['backlog', 'inprogress', 'review', 'ready', 'delivered', 'done'];
+
+    return statusOrder
+      .filter(key => statusCounts.get(key) > 0)
+      .map(key => {
+        const count = statusCounts.get(key) || 0;
+        const label = statusLabels[key] || key;
+        return `
+          <button class="filter-btn ${State.filters.status === key ? 'active' : ''}"
+                  data-filter="${key}">
+            ${label} <span class="tag-count">${count}</span>
+          </button>
+        `;
+      }).join('');
+  }
+
+  /**
    * Attache les écouteurs délégués (une seule fois)
    * Ces listeners utilisent la délégation d'événements et ne doivent pas être dupliqués
    */
@@ -222,19 +260,22 @@ class SidebarComponent {
   _handleFilterClick(btn) {
     const filterValue = btn.dataset.filter;
     const filterGroup = btn.closest('.filter-group');
-    const groupTitle = filterGroup?.querySelector('h3')?.textContent.trim();
+    const filterType = filterGroup?.dataset.filterType;
 
-    switch (groupTitle) {
-      case 'Statut':
-        this._handleStatusFilter(btn, filterValue);
+    switch (filterType) {
+      case 'status':
+        this._handleStatusFilter(btn, filterValue, filterGroup);
         break;
-      case 'Projets':
+      case 'options':
+        this._handleOptionsFilter(btn, filterValue);
+        break;
+      case 'projects':
         this._handleProjectFilter(btn, filterValue, filterGroup);
         break;
-      case 'Rapporteurs':
+      case 'people':
         this._handlePeopleFilter(btn, filterValue, filterGroup);
         break;
-      case 'Tags':
+      case 'tags':
         this._handleTagFilter(btn, filterValue, filterGroup);
         break;
     }
@@ -243,7 +284,21 @@ class SidebarComponent {
   /**
    * Gère le filtre de statut
    */
-  _handleStatusFilter(btn, filterValue) {
+  _handleStatusFilter(btn, filterValue, filterGroup) {
+    if (btn.classList.contains('active')) {
+      removeClass(btn, 'active');
+      State.setFilter('status', null);
+    } else {
+      $$('.filter-btn', filterGroup).forEach(b => removeClass(b, 'active'));
+      addClass(btn, 'active');
+      State.setFilter('status', filterValue);
+    }
+  }
+
+  /**
+   * Gère les options (showDone, showLabelDone)
+   */
+  _handleOptionsFilter(btn, filterValue) {
     if (filterValue === 'show-done') {
       const newValue = !State.filters.showDone;
       State.setFilter('showDone', newValue);
