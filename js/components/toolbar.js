@@ -1,12 +1,12 @@
 /**
- * Composant Stats - Barre d'outils et statistiques
+ * Composant Toolbar - Barre d'outils
  */
 
 import { State } from '../state.js';
 import { $, setHtml, delegate } from '../utils/dom.js';
 import { Templates } from '../utils/templates.js';
 
-class StatsComponent {
+class ToolbarComponent {
   constructor() {
     this._element = null;
     this._unsubscribers = [];
@@ -20,7 +20,7 @@ class StatsComponent {
   async init(selector) {
     this._element = $(selector);
     if (!this._element) {
-      console.error('Stats container not found:', selector);
+      console.error('Toolbar container not found:', selector);
       return;
     }
 
@@ -123,4 +123,4 @@ class StatsComponent {
   }
 }
 
-export const Stats = new StatsComponent();
+export const Toolbar = new ToolbarComponent();

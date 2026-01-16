@@ -14,44 +14,6 @@
   overflow-y: auto;
 }
 
-.filters {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-}
-
-.sidebar-spacer {
-  flex: 1;
-  min-height: 20px;
-}
-
-.sidebar-config-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 16px;
-  background: var(--color-bg-alt);
-  border: 1px solid var(--color-gray-300);
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  color: var(--color-gray-700);
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  margin-top: 16px;
-}
-
-.sidebar-config-btn:hover {
-  background: var(--color-gray-200);
-  border-color: var(--color-gray-400);
-}
-
-.sidebar-config-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
 .sidebar-title {
   font-size: 18px;
   font-weight: 600;

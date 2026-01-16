@@ -13,7 +13,7 @@ import { Storage } from './services/storage.js';
 import { Sidebar } from './components/sidebar.js';
 import { Timeline } from './components/timeline.js';
 import { TaskTable } from './components/task-table.js';
-import { Stats } from './components/stats.js';
+import { Toolbar } from './components/toolbar.js';
 import { ImportModal } from './components/modals/import.js';
 import { ReportModal } from './components/modals/report.js';
 import { ConfigModal } from './components/modals/config.js';
@@ -41,8 +41,8 @@ class JiraReportApp {
 
     try {
       // Initialiser les composants un par un avec logging (async pour les templates)
-      Debug.log('Initializing Stats...');
-      await Stats.init('#stats');
+      Debug.log('Initializing Toolbar...');
+      await Toolbar.init('#toolbar');
 
       Debug.log('Initializing Sidebar...');
       Sidebar.init('#filters');
