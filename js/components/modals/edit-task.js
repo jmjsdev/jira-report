@@ -172,6 +172,11 @@ class EditTaskModalComponent {
     projectInput.value = task.project || '';
     this._populateProjectList();
 
+    // Rapporteur
+    const reporterInput = $('#edit-task-reporter', this._element);
+    reporterInput.value = task.reporter || '';
+    this._populateReporterList();
+
     // Statut
     this._populateStatusSelect(task.status);
 
@@ -212,6 +217,16 @@ class EditTaskModalComponent {
     const projects = State.projects;
 
     setHtml(datalist, projects.map(p => `<option value="${escapeAttr(p)}">`).join(''));
+  }
+
+  /**
+   * Remplit la liste des rapporteurs disponibles
+   */
+  _populateReporterList() {
+    const datalist = $('#reporter-list', this._element);
+    const people = State.people;
+
+    setHtml(datalist, people.map(p => `<option value="${escapeAttr(p)}">`).join(''));
   }
 
   /**
@@ -373,6 +388,9 @@ class EditTaskModalComponent {
     // Récupérer le projet
     const project = $('#edit-task-project', this._element).value.trim();
 
+    // Récupérer le rapporteur
+    const reporter = $('#edit-task-reporter', this._element).value.trim();
+
     // Récupérer le statut (recherche insensible à la casse)
     const status = $('#edit-task-status', this._element).value;
     const statusMapKey = Object.keys(Config.statusMap).find(
@@ -391,6 +409,7 @@ class EditTaskModalComponent {
     State.updateTask(this._currentTaskKey, {
       summary,
       project,
+      reporter,
       status,
       statusKey: statusInfo.key,
       statusLabel: statusInfo.label,

@@ -17,7 +17,7 @@
       <input type="text" id="edit-task-summary" class="edit-input" placeholder="Titre du ticket...">
     </div>
 
-    <!-- Projet et Statut sur la meme ligne -->
+    <!-- Projet, Statut et Rapporteur -->
     <div class="edit-section edit-section-row">
       <div class="edit-field">
         <label for="edit-task-project">Projet</label>
@@ -27,6 +27,11 @@
       <div class="edit-field">
         <label for="edit-task-status">Statut</label>
         <select id="edit-task-status" class="edit-input"></select>
+      </div>
+      <div class="edit-field">
+        <label for="edit-task-reporter">Rapporteur</label>
+        <input type="text" id="edit-task-reporter" class="edit-input" list="reporter-list" placeholder="Rapporteur...">
+        <datalist id="reporter-list"></datalist>
       </div>
     </div>
 
