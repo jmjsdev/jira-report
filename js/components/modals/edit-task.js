@@ -95,6 +95,19 @@ class EditTaskModalComponent {
         this._handleQuickDate(dateBtn.dataset.date);
       }
     });
+
+    // Changement de rapporteur (select)
+    const reporterSelect = $('#edit-task-reporter-select', this._element);
+    reporterSelect?.addEventListener('change', () => {
+      const customInput = $('#edit-task-reporter-custom', this._element);
+      if (reporterSelect.value === '__custom__') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+      } else {
+        customInput.classList.add('hidden');
+        customInput.value = '';
+      }
+    });
   }
 
   /**
@@ -173,9 +186,7 @@ class EditTaskModalComponent {
     this._populateProjectList();
 
     // Rapporteur
-    const reporterInput = $('#edit-task-reporter', this._element);
-    reporterInput.value = task.reporter || '';
-    this._populateReporterList();
+    this._populateReporterSelect(task.reporter || '');
 
     // Statut
     this._populateStatusSelect(task.status);
@@ -220,13 +231,35 @@ class EditTaskModalComponent {
   }
 
   /**
-   * Remplit la liste des rapporteurs disponibles
+   * Remplit le select des rapporteurs
    */
-  _populateReporterList() {
-    const datalist = $('#reporter-list', this._element);
-    const people = State.people;
+  _populateReporterSelect(currentReporter) {
+    const select = $('#edit-task-reporter-select', this._element);
+    const customInput = $('#edit-task-reporter-custom', this._element);
+    const people = State.people.sort((a, b) => a.localeCompare(b));
+    const currentLower = (currentReporter || '').toLowerCase();
 
-    setHtml(datalist, people.map(p => `<option value="${escapeAttr(p)}">`).join(''));
+    // Vérifier si le rapporteur actuel est dans la liste
+    const isInList = people.some(p => p.toLowerCase() === currentLower);
+
+    let html = '<option value="">-- Aucun --</option>';
+    people.forEach(p => {
+      const selected = p.toLowerCase() === currentLower ? 'selected' : '';
+      html += `<option value="${escapeAttr(p)}" ${selected}>${escapeAttr(p)}</option>`;
+    });
+    html += '<option value="__custom__">Autre...</option>';
+
+    setHtml(select, html);
+
+    // Si le rapporteur n'est pas dans la liste, afficher le champ custom
+    if (currentReporter && !isInList) {
+      select.value = '__custom__';
+      customInput.value = currentReporter;
+      customInput.classList.remove('hidden');
+    } else {
+      customInput.classList.add('hidden');
+      customInput.value = '';
+    }
   }
 
   /**
@@ -389,7 +422,11 @@ class EditTaskModalComponent {
     const project = $('#edit-task-project', this._element).value.trim();
 
     // Récupérer le rapporteur
-    const reporter = $('#edit-task-reporter', this._element).value.trim();
+    const reporterSelect = $('#edit-task-reporter-select', this._element);
+    const reporterCustom = $('#edit-task-reporter-custom', this._element);
+    const reporter = reporterSelect.value === '__custom__'
+      ? reporterCustom.value.trim()
+      : (reporterSelect.value || '').trim();
 
     // Récupérer le statut (recherche insensible à la casse)
     const status = $('#edit-task-status', this._element).value;

@@ -41,8 +41,8 @@ class SidebarComponent {
     const statusCounts = State.getStatusCounts();
     const totalTasks = State.tasks.length;
 
-    // Compter les tâches avec statut "done"
-    const doneStatusCount = statusCounts.get('done') || 0;
+    // Compter les tâches marquées comme terminées manuellement (done === true)
+    const doneCount = State.getDoneCount();
 
     // Compter les tâches avec label "done"
     const doneLabelsCount = tagCounts.get('done') || 0;
@@ -77,7 +77,7 @@ class SidebarComponent {
         <h3>Options</h3>
         <div class="task-labels">
           <button class="filter-btn ${State.filters.showDone ? 'active' : ''}" data-filter="show-done">
-            ${State.filters.showDone ? 'Masquer' : 'Afficher'} terminées <span class="tag-count">${doneStatusCount}</span>
+            ${State.filters.showDone ? 'Masquer' : 'Afficher'} terminées <span class="tag-count">${doneCount}</span>
           </button>
           ${doneLabelsCount > 0 ? `
             <button class="filter-btn ${State.filters.showLabelDone ? 'active' : ''}" data-filter="label-done">

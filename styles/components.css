@@ -355,7 +355,7 @@
   content: "⇅";
 }
 
-.tasks-table th.col-select { width: 3%; text-align: center; }
+.tasks-table th.col-select { width: 3%; text-align: center; padding-left: 6px; padding-right: 6px; }
 .tasks-table th.col-key { width: 6%; }
 .tasks-table th.col-title { width: 28%; }
 .tasks-table th.col-project { width: 8%; }
@@ -741,8 +741,10 @@
   background-color: var(--color-bg-alt);
 }
 
-.task-select {
+.tasks-table td.task-select {
   text-align: center;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .task-checkbox,

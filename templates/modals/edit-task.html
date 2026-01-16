@@ -30,8 +30,10 @@
       </div>
       <div class="edit-field">
         <label for="edit-task-reporter">Rapporteur</label>
-        <input type="text" id="edit-task-reporter" class="edit-input" list="reporter-list" placeholder="Rapporteur...">
-        <datalist id="reporter-list"></datalist>
+        <div class="edit-reporter-container">
+          <select id="edit-task-reporter-select" class="edit-input"></select>
+          <input type="text" id="edit-task-reporter-custom" class="edit-input hidden" placeholder="Nom du rapporteur...">
+        </div>
       </div>
     </div>
 

@@ -1132,7 +1132,7 @@
    Modal Edition Ticket
    ============================================ */
 .modal-content-medium {
-  max-width: 600px;
+  max-width: 800px;
 }
 
 .edit-section {
@@ -1187,6 +1187,20 @@
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+}
+
+#edit-task-duedate {
+  width: 200px;
+}
+
+.edit-reporter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-reporter-container .edit-input {
+  width: 100%;
 }
 
 /* Boutons de date rapide */

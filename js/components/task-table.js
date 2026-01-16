@@ -273,7 +273,7 @@ class TaskTableComponent {
    */
   _renderByProject() {
     const tasksByProject = State.getTasksByProject();
-    const projectNames = Object.keys(tasksByProject).sort();
+    const projectNames = Object.keys(tasksByProject).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
     if (projectNames.length === 0) {
       setHtml(this._element, `
@@ -531,6 +531,12 @@ class TaskTableComponent {
         }
       });
       this._updateBatchToolbar();
+    });
+
+    // Empêcher le double-clic sur checkbox d'ouvrir la modal
+    delegate(this._element, 'dblclick', '.task-checkbox', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
     });
 
     // Double-clic sur une ligne pour éditer le ticket

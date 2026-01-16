@@ -244,8 +244,8 @@ class AppState {
         if (task.statusKey !== this._filters.status) return false;
       }
 
-      // Filtre terminé
-      if (!this._filters.showDone && task.statusKey === 'done') {
+      // Filtre terminé (task.done = marqué manuellement comme terminé)
+      if (!this._filters.showDone && task.done === true) {
         return false;
       }
 
@@ -397,6 +397,18 @@ class AppState {
     });
 
     return counts;
+  }
+
+  /**
+   * Compte les tâches marquées comme terminées manuellement (done === true)
+   */
+  getDoneCount() {
+    let count = 0;
+    this._tasks.forEach(task => {
+      if (UserConfig.isBlacklisted(task.key)) return;
+      if (task.done === true) count++;
+    });
+    return count;
   }
 
   // ========================================
