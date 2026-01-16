@@ -232,7 +232,7 @@ class ReportModalComponent {
     allTasks.forEach(task => {
       let row = '';
       if (options.echeance) row += (formatDate(task.dueDate) || '-').padEnd(COL_ECHEANCE) + ' | ';
-      if (options.statut) row += ((task.statusIcon || '') + ' ' + (task.statusLabel || 'Backlog')).padEnd(COL_STATUT) + ' | ';
+      if (options.statut) row += (task.statusLabel || 'Backlog').padEnd(COL_STATUT) + ' | ';
       if (options.personne) row += (task.reporter || '-').padEnd(COL_PERSONNE) + ' | ';
       if (options.projet) row += (task.project || '-').padEnd(COL_PROJET) + ' | ';
       if (options.jira) row += (task.key || '-').padEnd(COL_JIRA) + ' | ';
@@ -310,7 +310,7 @@ class ReportModalComponent {
             data-project="${escapeAttr(task.project || '')}"
             data-jira="${task.key || ''}">
           ${options.echeance ? `<td>${formatDate(task.dueDate) || '-'}</td>` : ''}
-          ${options.statut ? `<td class="cell-status"><span class="status-badge ${statusCss}">${task.statusIcon || ''} ${task.statusLabel || 'Backlog'}</span></td>` : ''}
+          ${options.statut ? `<td class="cell-status"><span class="status-badge ${statusCss}">${icon(task.statusIconName || 'list')} ${task.statusLabel || 'Backlog'}</span></td>` : ''}
           ${options.personne ? `<td>${task.reporter || '-'}</td>` : ''}
           ${options.projet ? `<td>${task.project || '-'}</td>` : ''}
           ${options.jira ? `<td>${task.key || '-'}</td>` : ''}
