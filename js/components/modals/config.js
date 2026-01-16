@@ -8,6 +8,7 @@ import { Storage } from '../../services/storage.js';
 import { State } from '../../state.js';
 import { $, $$, setHtml, addClass, removeClass, escapeAttr } from '../../utils/dom.js';
 import { Templates } from '../../utils/templates.js';
+import { icon } from '../../utils/icons.js';
 
 class ConfigModalComponent {
   constructor() {
@@ -74,8 +75,8 @@ class ConfigModalComponent {
 
     setHtml(container, tags.map(tag => `
       <div class="config-item">
-        <span class="config-item-label">🏷️ ${escapeAttr(tag)}</span>
-        <button class="config-item-remove" data-action="remove-tag" data-value="${escapeAttr(tag)}">✕</button>
+        <span class="config-item-label">${icon('tag')} ${escapeAttr(tag)}</span>
+        <button class="config-item-remove" data-action="remove-tag" data-value="${escapeAttr(tag)}">${icon('x')}</button>
       </div>
     `).join(''));
   }
@@ -190,20 +191,20 @@ class ConfigModalComponent {
     }
 
     const sourceIcons = {
-      status: '📊',
-      project: '📁',
-      component: '🧩',
-      type: '📋',
-      priority: '⚡'
+      status: icon('barChart'),
+      project: icon('folder'),
+      component: icon('package'),
+      type: icon('clipboard'),
+      priority: icon('zap')
     };
 
     setHtml(container, `
       <div class="config-suggestions-box">
-        <span class="config-suggestions-hint">💡 Suggestions (clic = ajouter) :</span>
+        <span class="config-suggestions-hint">${icon('lightbulb')} Suggestions (clic = ajouter) :</span>
         <div class="config-suggestions-list">
           ${suggestions.map(([name, { count, source }]) => `
             <button class="config-suggestion config-tag-suggestion" data-tag-suggestion="${escapeAttr(name)}" title="${source}">
-              ${sourceIcons[source] || '🏷️'} ${escapeAttr(name)} <span class="suggestion-count">${count}</span>
+              ${sourceIcons[source] || icon('tag')} ${escapeAttr(name)} <span class="suggestion-count">${count}</span>
             </button>
           `).join('')}
         </div>
@@ -270,7 +271,7 @@ class ConfigModalComponent {
 
     setHtml(container, `
       <div class="config-suggestions-box">
-        <span class="config-suggestions-hint">💡 Suggestions depuis les titres (clic = ajouter) :</span>
+        <span class="config-suggestions-hint">${icon('lightbulb')} Suggestions depuis les titres (clic = ajouter) :</span>
         <div class="config-suggestions-list">
           ${suggestions.map(([name, count]) => `
             <button class="config-suggestion" data-suggestion="${escapeAttr(name)}">
@@ -299,15 +300,15 @@ class ConfigModalComponent {
     setHtml(container, rules.map(rule => `
       <div class="config-item config-item-project">
         <div class="config-project-header">
-          <span class="config-item-label">📁</span>
+          <span class="config-item-label">${icon('folder')}</span>
           <input type="text" class="config-project-name-input" value="${escapeAttr(rule.name)}" data-original="${escapeAttr(rule.name)}">
-          <button class="config-item-remove" data-action="remove-project" data-value="${escapeAttr(rule.name)}">✕</button>
+          <button class="config-item-remove" data-action="remove-project" data-value="${escapeAttr(rule.name)}">${icon('x')}</button>
         </div>
         <div class="config-project-patterns">
           ${rule.patterns.map(p => `
             <span class="config-pattern">
               ${escapeAttr(p)}
-              <button class="config-pattern-remove" data-action="remove-pattern" data-project="${escapeAttr(rule.name)}" data-pattern="${escapeAttr(p)}">✕</button>
+              <button class="config-pattern-remove" data-action="remove-pattern" data-project="${escapeAttr(rule.name)}" data-pattern="${escapeAttr(p)}">${icon('x')}</button>
             </span>
           `).join('')}
           <div class="config-add-pattern-inline">
@@ -334,8 +335,8 @@ class ConfigModalComponent {
 
     setHtml(container, blacklist.map(key => `
       <div class="config-item">
-        <span class="config-item-label">🚫 ${escapeAttr(key)}</span>
-        <button class="config-item-remove" data-action="remove-blacklist" data-value="${escapeAttr(key)}">✕</button>
+        <span class="config-item-label">${icon('ban')} ${escapeAttr(key)}</span>
+        <button class="config-item-remove" data-action="remove-blacklist" data-value="${escapeAttr(key)}">${icon('x')}</button>
       </div>
     `).join(''));
   }
@@ -524,7 +525,7 @@ class ConfigModalComponent {
     const result = Storage.refreshProjectDetection();
 
     if (statusEl) {
-      statusEl.textContent = result.success ? `✓ ${result.message}` : `⚠️ ${result.message}`;
+      statusEl.innerHTML = result.success ? `${icon('check')} ${result.message}` : `${icon('alertTriangle')} ${result.message}`;
       statusEl.className = 'config-refresh-status ' + (result.success ? 'success' : 'error');
 
       // Effacer le message après 3 secondes

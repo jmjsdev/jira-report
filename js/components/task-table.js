@@ -7,6 +7,7 @@ import { Config } from '../config.js';
 import { UserConfig } from '../services/user-config.js';
 import { $, setHtml, escapeAttr, delegate } from '../utils/dom.js';
 import { formatDate, getDueClass } from '../utils/date.js';
+import { icon } from '../utils/icons.js';
 
 class TaskTableComponent {
   constructor() {
@@ -285,22 +286,22 @@ class TaskTableComponent {
     const statusLower = status.toLowerCase();
     // Seulement "Done", "Closed", "Resolved" sont auto-done, PAS "terminé"
     if (statusLower === 'done' || statusLower === 'closed' || statusLower === 'resolved') {
-      return { key: 'done', label: status, icon: '✓', cssClass: 'status-done' };
+      return { key: 'done', label: status, iconName: 'checkCircle', cssClass: 'status-done' };
     }
     if (statusLower.includes('progress') || statusLower.includes('cours') || statusLower.includes('développ') || statusLower.includes('terminé')) {
-      return { key: 'inprogress', label: status, icon: '⏳', cssClass: 'status-inprogress' };
+      return { key: 'inprogress', label: status, iconName: 'clock', cssClass: 'status-inprogress' };
     }
     if (statusLower.includes('review') || statusLower.includes('revue')) {
-      return { key: 'review', label: status, icon: '👀', cssClass: 'status-review' };
+      return { key: 'review', label: status, iconName: 'eye', cssClass: 'status-review' };
     }
     if (statusLower.includes('livr') || statusLower.includes('deliver')) {
-      return { key: 'delivered', label: status, icon: '📦', cssClass: 'status-delivered' };
+      return { key: 'delivered', label: status, iconName: 'check', cssClass: 'status-delivered' };
     }
     if (statusLower.includes('prêt') || statusLower.includes('ready') || statusLower.includes('test')) {
-      return { key: 'ready', label: status, icon: '🚀', cssClass: 'status-ready' };
+      return { key: 'ready', label: status, iconName: 'playCircle', cssClass: 'status-ready' };
     }
     // Par défaut, afficher le statut brut avec style backlog
-    return { key: 'backlog', label: status, icon: '📋', cssClass: 'status-backlog' };
+    return { key: 'backlog', label: status, iconName: 'list', cssClass: 'status-backlog' };
   }
 
   /**
@@ -319,7 +320,7 @@ class TaskTableComponent {
     const dueDate = formatDate(task.dueDate);
     const dueClass = getDueClass(task.dueDate);
 
-    const statusIcon = statusInfo.icon;
+    const statusIconHtml = icon(statusInfo.iconName || 'list');
     const statusLabel = statusInfo.label;
     const statusCss = statusInfo.cssClass;
 
@@ -329,6 +330,12 @@ class TaskTableComponent {
     const labels = (task.labels || []).map(l => this._formatLabel(l)).join('');
     const jiraUrl = task.link || null;
     const taskKey = task.key || '';
+
+    const checkIcon = icon('check');
+    const undoIcon = icon('refresh');
+    const editIcon = icon('edit');
+    const banIcon = icon('ban');
+    const trashIcon = icon('trash');
 
     return `
       <tr class="${rowClass}"
@@ -347,23 +354,23 @@ class TaskTableComponent {
         </td>
         <td class="task-title">
           ${escapeAttr(task.summary || '')}
-          ${isManualDone ? '<span class="task-manual-done-badge">✓ Terminé</span>' : ''}
-          ${!isManualDone && isStatusDone ? '<span class="task-done-badge">✓ Terminé</span>' : ''}
-          ${!isManualDone && !isStatusDone && hasLabelDone ? '<span class="task-label-done-badge">✓ Terminé</span>' : ''}
+          ${isManualDone ? `<span class="task-manual-done-badge">${checkIcon} Terminé</span>` : ''}
+          ${!isManualDone && isStatusDone ? `<span class="task-done-badge">${checkIcon} Terminé</span>` : ''}
+          ${!isManualDone && !isStatusDone && hasLabelDone ? `<span class="task-label-done-badge">${checkIcon} Terminé</span>` : ''}
         </td>
         <td class="task-project">${escapeAttr(task.project || '')}</td>
         <td class="task-reporter">${escapeAttr(task.reporter || '')}</td>
         <td class="task-status">
-          <span class="status-badge ${statusCss}">${statusIcon} ${statusLabel}</span>
+          <span class="status-badge ${statusCss}">${statusIconHtml} ${statusLabel}</span>
         </td>
         <td class="task-due ${dueClass}">${dueDate}</td>
         <td><div class="task-labels">${labels}</div></td>
         <td class="priority ${priorityCss}">${priorityText}</td>
         <td class="task-actions">
-          <button class="action-btn action-done ${task.done ? 'is-done' : ''}" data-action="done" data-key="${escapeAttr(taskKey)}" title="${task.done ? 'Marquer non terminé' : 'Marquer terminé'}">${task.done ? '↩' : '✓'}</button>
-          <button class="action-btn action-edit" data-action="edit" data-key="${escapeAttr(taskKey)}" title="Modifier">✏️</button>
-          <button class="action-btn action-ban" data-action="ban" data-key="${escapeAttr(taskKey)}" title="Bloquer">🚫</button>
-          <button class="action-btn action-delete" data-action="delete" data-key="${escapeAttr(taskKey)}" title="Supprimer">🗑️</button>
+          <button class="action-btn action-done ${task.done ? 'is-done' : ''}" data-action="done" data-key="${escapeAttr(taskKey)}" title="${task.done ? 'Marquer non terminé' : 'Marquer terminé'}">${task.done ? undoIcon : checkIcon}</button>
+          <button class="action-btn action-edit" data-action="edit" data-key="${escapeAttr(taskKey)}" title="Modifier">${editIcon}</button>
+          <button class="action-btn action-ban" data-action="ban" data-key="${escapeAttr(taskKey)}" title="Bloquer">${banIcon}</button>
+          <button class="action-btn action-delete" data-action="delete" data-key="${escapeAttr(taskKey)}" title="Supprimer">${trashIcon}</button>
         </td>
       </tr>
     `;

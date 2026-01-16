@@ -1,6 +1,8 @@
 /**
  * Configuration de l'application Jira Report
  */
+import { icon } from './utils/icons.js';
+
 export const Config = {
   // Mapping des priorités JIRA vers l'application
   priorityMap: {
@@ -11,27 +13,36 @@ export const Config = {
     'Lowest': { value: 1, text: 'Minimale', class: 'lowest' }
   },
 
-  // Mapping des statuts JIRA vers l'application
+  // Mapping des statuts JIRA vers l'application (iconName = nom de l'icône SVG)
   statusMap: {
     // Statuts JIRA standards
-    'Open': { key: 'backlog', label: 'Backlog', icon: '📋', cssClass: 'status-backlog' },
-    'To Do': { key: 'backlog', label: 'Backlog', icon: '📋', cssClass: 'status-backlog' },
-    'Backlog': { key: 'backlog', label: 'Backlog', icon: '📋', cssClass: 'status-backlog' },
-    'In Progress': { key: 'inprogress', label: 'En cours', icon: '⏳', cssClass: 'status-inprogress' },
-    'En cours': { key: 'inprogress', label: 'En cours', icon: '⏳', cssClass: 'status-inprogress' },
-    'In Review': { key: 'review', label: 'En revue', icon: '👀', cssClass: 'status-review' },
-    'Ready for Test': { key: 'ready', label: 'Prêt à livrer', icon: '🚀', cssClass: 'status-ready' },
-    'Prêt à livrer': { key: 'ready', label: 'Prêt à livrer', icon: '🚀', cssClass: 'status-ready' },
-    'Done': { key: 'done', label: 'Terminé', icon: '✓', cssClass: 'status-done' },
-    'Terminé': { key: 'done', label: 'Terminé', icon: '✓', cssClass: 'status-done' },
-    'Closed': { key: 'done', label: 'Terminé', icon: '✓', cssClass: 'status-done' },
-    'Resolved': { key: 'done', label: 'Terminé', icon: '✓', cssClass: 'status-done' },
-    'Livré': { key: 'delivered', label: 'Livré', icon: '📦', cssClass: 'status-delivered' },
-    'Delivered': { key: 'delivered', label: 'Livré', icon: '📦', cssClass: 'status-delivered' }
+    'Open': { key: 'backlog', label: 'Backlog', iconName: 'list', cssClass: 'status-backlog' },
+    'To Do': { key: 'backlog', label: 'Backlog', iconName: 'list', cssClass: 'status-backlog' },
+    'Backlog': { key: 'backlog', label: 'Backlog', iconName: 'list', cssClass: 'status-backlog' },
+    'In Progress': { key: 'inprogress', label: 'En cours', iconName: 'clock', cssClass: 'status-inprogress' },
+    'En cours': { key: 'inprogress', label: 'En cours', iconName: 'clock', cssClass: 'status-inprogress' },
+    'In Review': { key: 'review', label: 'En revue', iconName: 'eye', cssClass: 'status-review' },
+    'Ready for Test': { key: 'ready', label: 'Prêt à livrer', iconName: 'playCircle', cssClass: 'status-ready' },
+    'Prêt à livrer': { key: 'ready', label: 'Prêt à livrer', iconName: 'playCircle', cssClass: 'status-ready' },
+    'Done': { key: 'done', label: 'Terminé', iconName: 'checkCircle', cssClass: 'status-done' },
+    'Terminé': { key: 'done', label: 'Terminé', iconName: 'checkCircle', cssClass: 'status-done' },
+    'Closed': { key: 'done', label: 'Terminé', iconName: 'checkCircle', cssClass: 'status-done' },
+    'Resolved': { key: 'done', label: 'Terminé', iconName: 'checkCircle', cssClass: 'status-done' },
+    'Livré': { key: 'delivered', label: 'Livré', iconName: 'check', cssClass: 'status-delivered' },
+    'Delivered': { key: 'delivered', label: 'Livré', iconName: 'check', cssClass: 'status-delivered' }
   },
 
   // Statut par défaut
-  defaultStatus: { key: 'backlog', label: 'Backlog', icon: '📋', cssClass: 'status-backlog' },
+  defaultStatus: { key: 'backlog', label: 'Backlog', iconName: 'list', cssClass: 'status-backlog' },
+
+  /**
+   * Retourne l'icône SVG pour un statut
+   * @param {string} iconName - Nom de l'icône
+   * @returns {string} - SVG HTML
+   */
+  getStatusIcon(iconName) {
+    return icon(iconName);
+  },
 
   // Ordre des statuts pour le tri
   statusOrder: {

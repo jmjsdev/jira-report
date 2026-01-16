@@ -5,6 +5,7 @@
 import { State } from '../state.js';
 import { UserConfig } from '../services/user-config.js';
 import { $, $$, setHtml, addClass, removeClass, delegate, debounce } from '../utils/dom.js';
+import { icon } from '../utils/icons.js';
 
 class SidebarComponent {
   constructor() {
@@ -52,9 +53,9 @@ class SidebarComponent {
       <div class="filter-group search-filter-group">
         <h3>Recherche</h3>
         <div class="search-box">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon">${icon('search')}</span>
           <input type="text" id="search-input" placeholder="Rechercher..." autocomplete="off">
-          <button id="clear-search" class="clear-search-btn hidden">✕</button>
+          <button id="clear-search" class="clear-search-btn hidden">${icon('x')}</button>
         </div>
         <div id="search-results-count" class="search-results-count hidden"></div>
       </div>
@@ -64,7 +65,7 @@ class SidebarComponent {
         <h3>Statut</h3>
         <div class="task-labels">
           <button class="filter-btn ${State.filters.showDone ? 'active' : ''}" data-filter="show-done">
-            Afficher terminées <span class="tag-count">✓</span>
+            Afficher terminées <span class="tag-count">${icon('check')}</span>
           </button>
           ${doneLabelsCount > 0 ? `
             <button class="filter-btn ${State.filters.showLabelDone ? 'active' : ''}" data-filter="label-done">

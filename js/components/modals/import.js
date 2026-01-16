@@ -12,6 +12,7 @@ import { parseJiraXml, compareTickets } from '../../parsers/jira-xml.js';
 import { formatDate } from '../../utils/date.js';
 import { readFileAsText, isXmlFile } from '../../utils/file.js';
 import { Templates } from '../../utils/templates.js';
+import { icon } from '../../utils/icons.js';
 
 class ImportModalComponent {
   constructor() {
@@ -190,7 +191,7 @@ class ImportModalComponent {
 
     if (!isXmlFile(file)) {
       Debug.warn('File is not XML');
-      this._setStatus('❌ Le fichier doit être au format XML', 'error');
+      this._setStatus(icon('xCircle') + ' Le fichier doit être au format XML', 'error');
       return;
     }
 
@@ -211,7 +212,7 @@ class ImportModalComponent {
       Debug.success('_handleFileDrop COMPLETE');
     } catch (err) {
       Debug.error('_handleFileDrop FAILED: ' + err.message);
-      this._setStatus('❌ ' + err.message, 'error');
+      this._setStatus(icon('xCircle') + ' ' + err.message, 'error');
     }
   }
 
@@ -226,14 +227,14 @@ class ImportModalComponent {
 
     if (!xmlContent) {
       Debug.warn('No XML content');
-      this._setStatus('⚠️ Veuillez coller le contenu XML', 'error');
+      this._setStatus(icon('alertTriangle') + ' Veuillez coller le contenu XML', 'error');
       return;
     }
 
     Debug.log('XML content length: ' + xmlContent.length);
 
     try {
-      this._setStatus('⏳ Analyse en cours...', '');
+      this._setStatus(icon('loader') + ' Analyse en cours...', '');
 
       Debug.log('Parsing XML...');
       const tickets = parseJiraXml(xmlContent);
@@ -241,7 +242,7 @@ class ImportModalComponent {
 
       if (tickets.length === 0) {
         Debug.warn('No tickets found in XML');
-        this._setStatus('⚠️ Aucun ticket trouvé dans le XML', 'error');
+        this._setStatus(icon('alertTriangle') + ' Aucun ticket trouvé dans le XML', 'error');
         return;
       }
 
@@ -255,12 +256,12 @@ class ImportModalComponent {
       Debug.log('Displaying results...');
       this._displayResults(comparison);
 
-      this._setStatus(`✓ ${tickets.length} tickets analysés`, 'success');
+      this._setStatus(icon('check') + ` ${tickets.length} tickets analysés`, 'success');
       Debug.success('_analyze COMPLETE');
 
     } catch (err) {
       Debug.error('_analyze FAILED: ' + err.message);
-      this._setStatus('❌ ' + err.message, 'error');
+      this._setStatus(icon('xCircle') + ' ' + err.message, 'error');
       this._hideResults();
     }
   }
@@ -297,7 +298,7 @@ class ImportModalComponent {
     if (results.new.length > 0) {
       html += `
         <div class="jira-results-section">
-          <h3 class="jira-section-title jira-section-new">🆕 Tickets à ajouter (${results.new.length})</h3>
+          <h3 class="jira-section-title jira-section-new">${icon('plusCircle')} Tickets à ajouter (${results.new.length})</h3>
           ${this._renderTicketsTable(results.new)}
         </div>
       `;
@@ -307,7 +308,7 @@ class ImportModalComponent {
     if (results.existing.length > 0) {
       html += `
         <div class="jira-results-section">
-          <h3 class="jira-section-title jira-section-existing">✓ Tickets déjà présents (${results.existing.length})</h3>
+          <h3 class="jira-section-title jira-section-existing">${icon('checkCircle')} Tickets déjà présents (${results.existing.length})</h3>
           <details class="jira-existing-details">
             <summary>Afficher les ${results.existing.length} tickets existants</summary>
             ${this._renderTicketsTable(results.existing, true)}
@@ -377,7 +378,7 @@ class ImportModalComponent {
    */
   _importAdd() {
     if (!this._parsedTickets || this._parsedTickets.length === 0) {
-      this._setStatus('⚠️ Aucun ticket à importer', 'error');
+      this._setStatus(icon('alertTriangle') + ' Aucun ticket à importer', 'error');
       return;
     }
 
@@ -387,10 +388,10 @@ class ImportModalComponent {
     );
 
     if (result.success) {
-      this._setStatus(`✓ ${result.imported} tickets importés`, 'success');
+      this._setStatus(icon('check') + ` ${result.imported} tickets importés`, 'success');
       setTimeout(() => this.close(), 1500);
     } else {
-      this._setStatus('❌ ' + (result.message || 'Erreur'), 'error');
+      this._setStatus(icon('xCircle') + ' ' + (result.message || 'Erreur'), 'error');
     }
   }
 
@@ -399,7 +400,7 @@ class ImportModalComponent {
    */
   _importUpdate() {
     if (!this._parsedTickets || this._parsedTickets.length === 0) {
-      this._setStatus('⚠️ Aucun ticket à mettre à jour', 'error');
+      this._setStatus(icon('alertTriangle') + ' Aucun ticket à mettre à jour', 'error');
       return;
     }
 
@@ -410,7 +411,7 @@ class ImportModalComponent {
     });
 
     if (selectedKeys.size === 0) {
-      this._setStatus('⚠️ Aucun ticket sélectionné', 'error');
+      this._setStatus(icon('alertTriangle') + ' Aucun ticket sélectionné', 'error');
       return;
     }
 
@@ -477,7 +478,7 @@ class ImportModalComponent {
       }
     });
 
-    this._setStatus(`✓ ${updatedCount} tickets mis à jour`, 'success');
+    this._setStatus(icon('check') + ` ${updatedCount} tickets mis à jour`, 'success');
     setTimeout(() => this.close(), 1500);
   }
 
@@ -486,7 +487,7 @@ class ImportModalComponent {
    */
   _importReplace() {
     if (!this._parsedTickets || this._parsedTickets.length === 0) {
-      this._setStatus('⚠️ Aucun ticket à importer', 'error');
+      this._setStatus(icon('alertTriangle') + ' Aucun ticket à importer', 'error');
       return;
     }
 
@@ -496,10 +497,10 @@ class ImportModalComponent {
     );
 
     if (result.success) {
-      this._setStatus(`✓ ${result.imported} tickets importés (remplacement)`, 'success');
+      this._setStatus(icon('check') + ` ${result.imported} tickets importés (remplacement)`, 'success');
       setTimeout(() => this.close(), 1500);
     } else {
-      this._setStatus('❌ ' + (result.message || 'Erreur'), 'error');
+      this._setStatus(icon('xCircle') + ' ' + (result.message || 'Erreur'), 'error');
     }
   }
 
@@ -509,7 +510,7 @@ class ImportModalComponent {
   _setStatus(message, type) {
     const statusEl = $('#import-status', this._element);
     if (statusEl) {
-      statusEl.textContent = message;
+      statusEl.innerHTML = message;
       statusEl.className = 'jira-analyze-status';
       if (type === 'error') {
         addClass(statusEl, 'jira-status-error');

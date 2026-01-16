@@ -17,20 +17,19 @@
 }
 
 /**
- * SVG Icons - Inherit color from parent
+ * SVG Icons - Inherit color from parent text
  */
 svg {
   display: inline-block;
   vertical-align: middle;
-  color: inherit;
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  fill: none;
+  pointer-events: none;
 }
 
 .btn-icon svg {
   width: 16px;
   height: 16px;
-}
-
-button svg,
-a svg {
-  pointer-events: none;
 }

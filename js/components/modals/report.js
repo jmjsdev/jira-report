@@ -8,6 +8,7 @@ import { UserConfig } from '../../services/user-config.js';
 import { $, setHtml, addClass, removeClass, escapeAttr, copyToClipboard, copyHtmlToClipboard } from '../../utils/dom.js';
 import { formatDate } from '../../utils/date.js';
 import { Templates } from '../../utils/templates.js';
+import { icon } from '../../utils/icons.js';
 
 class ReportModalComponent {
   constructor() {
@@ -345,13 +346,13 @@ class ReportModalComponent {
       }
 
       if (statusEl) {
-        statusEl.textContent = '✓ Copié !';
-        setTimeout(() => { statusEl.textContent = ''; }, 2000);
+        statusEl.innerHTML = icon('check') + ' Copié !';
+        setTimeout(() => { statusEl.innerHTML = ''; }, 2000);
       }
     } catch (err) {
       if (statusEl) {
-        statusEl.textContent = '❌ Erreur de copie';
-        setTimeout(() => { statusEl.textContent = ''; }, 2000);
+        statusEl.innerHTML = icon('xCircle') + ' Erreur de copie';
+        setTimeout(() => { statusEl.innerHTML = ''; }, 2000);
       }
     }
   }

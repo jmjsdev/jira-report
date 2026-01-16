@@ -59,6 +59,9 @@ class StatsComponent {
     delegate(this._element, 'click', '#btn-save', () => {
       document.dispatchEvent(new CustomEvent('app:save'));
     });
+    delegate(this._element, 'click', '#btn-save-as', () => {
+      document.dispatchEvent(new CustomEvent('app:save-as'));
+    });
     delegate(this._element, 'click', '#btn-import-xml', () => {
       document.dispatchEvent(new CustomEvent('app:import-xml'));
     });

@@ -131,7 +131,7 @@ function parseItem(item) {
     statusId: getAttribute('status', 'id'),
     statusKey: statusInfo.key,
     statusLabel: statusInfo.label,
-    statusIcon: statusInfo.icon,
+    statusIconName: statusInfo.iconName,
     statusCssClass: statusInfo.cssClass,
 
     // Priorité
@@ -202,22 +202,22 @@ function getStatusInfo(jiraStatus, labels) {
     const statusLower = jiraStatus.toLowerCase();
     // Seulement "Done", "Closed", "Resolved" sont auto-done, PAS "terminé"
     if (statusLower === 'done' || statusLower === 'closed' || statusLower === 'resolved') {
-      return { key: 'done', label: jiraStatus, icon: '✓', cssClass: 'status-done' };
+      return { key: 'done', label: jiraStatus, iconName: 'checkCircle', cssClass: 'status-done' };
     }
     if (statusLower.includes('progress') || statusLower.includes('cours') || statusLower.includes('développ') || statusLower.includes('terminé')) {
-      return { key: 'inprogress', label: jiraStatus, icon: '⏳', cssClass: 'status-inprogress' };
+      return { key: 'inprogress', label: jiraStatus, iconName: 'clock', cssClass: 'status-inprogress' };
     }
     if (statusLower.includes('review') || statusLower.includes('revue')) {
-      return { key: 'review', label: jiraStatus, icon: '👀', cssClass: 'status-review' };
+      return { key: 'review', label: jiraStatus, iconName: 'eye', cssClass: 'status-review' };
     }
     if (statusLower.includes('livr') || statusLower.includes('deliver')) {
-      return { key: 'delivered', label: jiraStatus, icon: '📦', cssClass: 'status-delivered' };
+      return { key: 'delivered', label: jiraStatus, iconName: 'check', cssClass: 'status-delivered' };
     }
     if (statusLower.includes('prêt') || statusLower.includes('ready') || statusLower.includes('test')) {
-      return { key: 'ready', label: jiraStatus, icon: '🚀', cssClass: 'status-ready' };
+      return { key: 'ready', label: jiraStatus, iconName: 'playCircle', cssClass: 'status-ready' };
     }
     // Statut non reconnu - utiliser le label original avec style backlog
-    return { key: 'backlog', label: jiraStatus, icon: '📋', cssClass: 'status-backlog' };
+    return { key: 'backlog', label: jiraStatus, iconName: 'list', cssClass: 'status-backlog' };
   }
 
   // Statut par défaut

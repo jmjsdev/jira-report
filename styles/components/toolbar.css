@@ -80,6 +80,7 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   min-width: 50px;
+  color: var(--color-gray-600);
 }
 
 .toolbar-btn .btn-icon {
@@ -90,7 +91,6 @@
 .toolbar-btn .btn-label {
   font-size: 10px;
   font-weight: 500;
-  color: var(--color-gray-600);
 }
 
 .toolbar-btn:hover {
@@ -101,9 +101,6 @@
 .toolbar-btn-primary {
   background: var(--color-primary);
   border-color: var(--color-primary);
-}
-
-.toolbar-btn-primary .btn-label {
   color: white;
 }
 
@@ -114,25 +111,16 @@
 .toolbar-btn-toggle.active {
   background: var(--color-primary);
   border-color: var(--color-primary);
-}
-
-.toolbar-btn-toggle.active .btn-label {
   color: white;
 }
 
 .toolbar-btn-danger {
   border-color: var(--color-error);
-}
-
-.toolbar-btn-danger .btn-label {
   color: var(--color-error);
 }
 
 .toolbar-btn-danger:hover {
   background: var(--color-error);
   border-color: var(--color-error);
-}
-
-.toolbar-btn-danger:hover .btn-label {
   color: white;
 }

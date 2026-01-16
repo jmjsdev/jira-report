@@ -20,6 +20,7 @@ import { ConfigModal } from './components/modals/config.js';
 import { EditTaskModal } from './components/modals/edit-task.js';
 import { isFileSystemAccessSupported } from './utils/file.js';
 import { $ } from './utils/dom.js';
+import { icon } from './utils/icons.js';
 
 // Initialiser le debug en premier
 Debug.init();
@@ -164,6 +165,7 @@ class JiraReportApp {
   _attachCustomEvents() {
     document.addEventListener('app:open', () => this._handleOpen());
     document.addEventListener('app:save', () => this._handleSave());
+    document.addEventListener('app:save-as', () => this._handleSaveAs());
     document.addEventListener('app:import-xml', () => ImportModal.open());
     document.addEventListener('app:backup', () => this._handleBackup());
     document.addEventListener('app:clear', () => this._handleClear());
@@ -332,10 +334,10 @@ class JiraReportApp {
     const indicator = $('#fs-support-indicator');
     if (indicator) {
       if (isFileSystemAccessSupported()) {
-        indicator.textContent = '✓ File System Access API supporté';
+        indicator.innerHTML = icon('check') + ' File System Access API supporté';
         indicator.classList.add('supported');
       } else {
-        indicator.textContent = '⚠️ File System Access API non supporté - Mode téléchargement';
+        indicator.innerHTML = icon('alertTriangle') + ' File System Access API non supporté - Mode téléchargement';
         indicator.classList.add('unsupported');
       }
     }
