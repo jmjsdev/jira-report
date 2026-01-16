@@ -8,7 +8,7 @@ import { UserConfig } from '../services/user-config.js';
 import { $, setHtml, escapeAttr, delegate } from '../utils/dom.js';
 import { formatDate, getDueClass } from '../utils/date.js';
 import { icon } from '../utils/icons.js';
-import { renderStatusSelect, renderPrioritySelect, STATUS_OPTIONS, PRIORITY_OPTIONS } from '../utils/form.js';
+import { renderSelect, renderStatusSelect, renderPrioritySelect, STATUS_OPTIONS, PRIORITY_OPTIONS } from '../utils/form.js';
 
 class TaskTableComponent {
   constructor() {
@@ -133,6 +133,29 @@ class TaskTableComponent {
 
     applyBtn?.addEventListener('click', () => this._applyBatchEdit());
     clearBtn?.addEventListener('click', () => this._clearSelection());
+  }
+
+  /**
+   * Génère le select des projets
+   */
+  _renderProjectSelect() {
+    // Récupérer les projets depuis UserConfig (projets déclarés)
+    const declaredProjects = UserConfig.projectRules;
+
+    // Construire la liste des options
+    const options = declaredProjects
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(rule => ({
+        value: rule.name,
+        label: rule.name
+      }));
+
+    return renderSelect({
+      id: 'batch-value',
+      className: 'batch-select',
+      options,
+      placeholder: '-- Choisir un projet --'
+    });
   }
 
   /**
