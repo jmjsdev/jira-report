@@ -15,6 +15,7 @@ class TaskTableComponent {
     this._unsubscribers = [];
     this._sortState = {}; // { tableId: { key: 'title', dir: 'asc' } }
     this._selectedKeys = new Set(); // Tickets sélectionnés pour batch
+    this._lastClickedCheckbox = null; // Pour la sélection shift-click
   }
 
   /**
@@ -396,14 +397,44 @@ class TaskTableComponent {
       this._handleSort(th);
     });
 
-    // Checkbox individuelle
-    delegate(this._element, 'change', '.task-checkbox', (e, cb) => {
+    // Checkbox individuelle avec support shift-click
+    delegate(this._element, 'click', '.task-checkbox', (e, cb) => {
+      e.stopPropagation();
       const key = cb.dataset.key;
-      if (cb.checked) {
-        this._selectedKeys.add(key);
+      const table = cb.closest('table');
+
+      // Shift-click : sélectionner tous les items entre le dernier cliqué et celui-ci
+      if (e.shiftKey && this._lastClickedCheckbox && table) {
+        const checkboxes = Array.from(table.querySelectorAll('.task-checkbox'));
+        const lastIndex = checkboxes.indexOf(this._lastClickedCheckbox);
+        const currentIndex = checkboxes.indexOf(cb);
+
+        if (lastIndex !== -1 && currentIndex !== -1) {
+          const start = Math.min(lastIndex, currentIndex);
+          const end = Math.max(lastIndex, currentIndex);
+          const shouldCheck = cb.checked;
+
+          for (let i = start; i <= end; i++) {
+            const checkbox = checkboxes[i];
+            checkbox.checked = shouldCheck;
+            const itemKey = checkbox.dataset.key;
+            if (shouldCheck) {
+              this._selectedKeys.add(itemKey);
+            } else {
+              this._selectedKeys.delete(itemKey);
+            }
+          }
+        }
       } else {
-        this._selectedKeys.delete(key);
+        // Clic normal
+        if (cb.checked) {
+          this._selectedKeys.add(key);
+        } else {
+          this._selectedKeys.delete(key);
+        }
       }
+
+      this._lastClickedCheckbox = cb;
       this._updateBatchToolbar();
     });
 

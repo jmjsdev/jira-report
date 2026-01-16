@@ -750,5 +750,8 @@
   width: 16px;
   height: 16px;
   cursor: pointer;
+  padding: 4px;
+  margin: -4px;
+  box-sizing: content-box;
 }
 
