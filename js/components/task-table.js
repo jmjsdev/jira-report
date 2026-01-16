@@ -8,6 +8,7 @@ import { UserConfig } from '../services/user-config.js';
 import { $, setHtml, escapeAttr, delegate } from '../utils/dom.js';
 import { formatDate, getDueClass } from '../utils/date.js';
 import { icon } from '../utils/icons.js';
+import { renderStatusSelect, renderPrioritySelect, STATUS_OPTIONS, PRIORITY_OPTIONS } from '../utils/form.js';
 
 class TaskTableComponent {
   constructor() {
@@ -68,7 +69,9 @@ class TaskTableComponent {
               <option value="status">Statut</option>
               <option value="priority">Priorité</option>
             </select>
-            <input type="text" id="batch-value" class="batch-input" placeholder="Nouvelle valeur...">
+            <div id="batch-value-container">
+              <input type="text" id="batch-value" class="batch-input" placeholder="Nouvelle valeur...">
+            </div>
             <button id="batch-apply" class="batch-btn batch-btn-apply">Appliquer</button>
             <button id="batch-clear" class="batch-btn batch-btn-clear">Désélectionner</button>
           </div>
@@ -101,25 +104,30 @@ class TaskTableComponent {
    */
   _attachBatchListeners(toolbar) {
     const fieldSelect = document.getElementById('batch-field');
-    const valueInput = document.getElementById('batch-value');
+    const valueContainer = document.getElementById('batch-value-container');
     const applyBtn = document.getElementById('batch-apply');
     const clearBtn = document.getElementById('batch-clear');
 
     // Changer le type d'input selon le champ
     fieldSelect?.addEventListener('change', () => {
       const field = fieldSelect.value;
-      if (field === 'dueDate') {
-        valueInput.type = 'date';
-        valueInput.placeholder = '';
+
+      if (field === 'status') {
+        valueContainer.innerHTML = renderStatusSelect({
+          id: 'batch-value',
+          className: 'batch-select'
+        });
       } else if (field === 'priority') {
-        valueInput.type = 'text';
-        valueInput.placeholder = 'Highest, High, Medium, Low, Lowest';
-      } else if (field === 'status') {
-        valueInput.type = 'text';
-        valueInput.placeholder = 'Open, In Progress, Done...';
+        valueContainer.innerHTML = renderPrioritySelect({
+          id: 'batch-value',
+          className: 'batch-select'
+        });
+      } else if (field === 'project') {
+        valueContainer.innerHTML = this._renderProjectSelect();
+      } else if (field === 'dueDate') {
+        valueContainer.innerHTML = '<input type="date" id="batch-value" class="batch-input">';
       } else {
-        valueInput.type = 'text';
-        valueInput.placeholder = 'Nouvelle valeur...';
+        valueContainer.innerHTML = '<input type="text" id="batch-value" class="batch-input" placeholder="Nouvelle valeur...">';
       }
     });
 
@@ -152,7 +160,15 @@ class TaskTableComponent {
     } else if (field === 'reporter') {
       updates.reporter = value;
     } else if (field === 'status') {
-      updates.status = value;
+      // Trouver les infos du statut sélectionné
+      const statusInfo = STATUS_OPTIONS.find(s => s.value === value);
+      if (statusInfo) {
+        updates.statusKey = statusInfo.value;
+        updates.statusLabel = statusInfo.label;
+        updates.statusIconName = statusInfo.iconName;
+        updates.statusCssClass = `status-${statusInfo.value}`;
+        updates.status = statusInfo.label; // Pour la compatibilité
+      }
     } else if (field === 'priority') {
       updates.priority = value;
       // Mettre à jour les infos de priorité
