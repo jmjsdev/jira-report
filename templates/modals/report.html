@@ -1,4 +1,4 @@
-<div class="modal-content">
+<div class="modal-content modal-large">
   <div class="modal-header">
     <h2>{{icon:fileText}} Rapport des tâches filtrées</h2>
     <button id="close-report-modal" class="close-modal-btn">{{icon:x}}</button>
@@ -24,8 +24,25 @@
   </div>
 
   <div class="modal-body">
-    <textarea id="report-text-content" readonly></textarea>
-    <div id="report-html-content"></div>
+    <div class="report-section">
+      <div class="report-section-header">
+        <h3>{{icon:list}} Sélection des tickets</h3>
+        <div class="report-selection-actions">
+          <button id="report-select-all" class="report-selection-btn">Tout sélectionner</button>
+          <button id="report-deselect-all" class="report-selection-btn">Tout désélectionner</button>
+        </div>
+      </div>
+      <div id="report-tasks-list" class="report-tasks-list"></div>
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-header">
+        <h3>{{icon:fileText}} Rapport final</h3>
+        <span class="report-count">(<span id="report-selected-count">0</span> ticket(s) sélectionné(s))</span>
+      </div>
+      <textarea id="report-text-content" readonly></textarea>
+      <div id="report-html-content"></div>
+    </div>
   </div>
 
   <div class="modal-footer">

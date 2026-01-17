@@ -40,10 +40,13 @@ class TaskTableComponent {
    * Rend les tables selon le mode de vue
    */
   render() {
-    if (State.viewMode === 'project') {
-      this._renderByProject();
+    const viewMode = State.viewMode;
+
+    if (viewMode === 'merged') {
+      this._renderMerged();
     } else {
-      this._renderByDate();
+      // Vues groupées : project, reporter, priority
+      this._renderGrouped(viewMode);
     }
     this._updateBatchToolbar();
   }
@@ -269,41 +272,10 @@ class TaskTableComponent {
   }
 
   /**
-   * Rend les tâches groupées par projet
+   * Rend les tâches en vue fusionnée (un seul tableau)
    */
-  _renderByProject() {
-    const tasksByProject = State.getTasksByProject();
-    const projectNames = Object.keys(tasksByProject).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-
-    if (projectNames.length === 0) {
-      setHtml(this._element, `
-        <div class="empty-state">
-          <p>Aucune tâche à afficher</p>
-          <p>Importez un fichier XML JIRA ou ouvrez un projet existant.</p>
-        </div>
-      `);
-      return;
-    }
-
-    let html = '';
-    projectNames.forEach(projectName => {
-      const tasks = tasksByProject[projectName];
-      if (tasks.length === 0) return;
-
-      html += `
-        <h2 class="project-title">${projectName.toUpperCase()}</h2>
-        ${this._renderTable(tasks, `table-${projectName}`)}
-      `;
-    });
-
-    setHtml(this._element, html);
-  }
-
-  /**
-   * Rend les tâches triées par date
-   */
-  _renderByDate() {
-    const tasks = State.getTasksByDate();
+  _renderMerged() {
+    const tasks = State.getTasksMerged();
 
     if (tasks.length === 0) {
       setHtml(this._element, `
@@ -316,9 +288,40 @@ class TaskTableComponent {
     }
 
     setHtml(this._element, `
-      <h2 class="project-title">TÂCHES TRIÉES PAR DATE D'ÉCHÉANCE</h2>
-      ${this._renderTable(tasks, 'table-by-date', true)}
+      <h2 class="project-title">TOUS LES TICKETS (${tasks.length})</h2>
+      ${this._renderTable(tasks, 'table-merged', false)}
     `);
+  }
+
+  /**
+   * Rend les tâches groupées selon le mode (project, reporter, priority)
+   */
+  _renderGrouped(groupBy) {
+    const tasksByGroup = State.getTasksGroupedBy(groupBy);
+    const groupNames = Object.keys(tasksByGroup).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+    if (groupNames.length === 0) {
+      setHtml(this._element, `
+        <div class="empty-state">
+          <p>Aucune tâche à afficher</p>
+          <p>Importez un fichier XML JIRA ou ouvrez un projet existant.</p>
+        </div>
+      `);
+      return;
+    }
+
+    let html = '';
+    groupNames.forEach(groupName => {
+      const tasks = tasksByGroup[groupName];
+      if (tasks.length === 0) return;
+
+      html += `
+        <h2 class="project-title">${groupName.toUpperCase()} (${tasks.length})</h2>
+        ${this._renderTable(tasks, `table-${groupBy}-${groupName}`, false)}
+      `;
+    });
+
+    setHtml(this._element, html);
   }
 
   /**

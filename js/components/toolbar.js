@@ -86,8 +86,16 @@ class ToolbarComponent {
       State.setViewMode('project');
       this._updateViewModeButtons();
     });
-    delegate(this._element, 'click', '#view-by-date', () => {
-      State.setViewMode('date');
+    delegate(this._element, 'click', '#view-by-reporter', () => {
+      State.setViewMode('reporter');
+      this._updateViewModeButtons();
+    });
+    delegate(this._element, 'click', '#view-by-priority', () => {
+      State.setViewMode('priority');
+      this._updateViewModeButtons();
+    });
+    delegate(this._element, 'click', '#view-by-merged', () => {
+      State.setViewMode('merged');
       this._updateViewModeButtons();
     });
   }
@@ -97,11 +105,15 @@ class ToolbarComponent {
    */
   _updateViewModeButtons() {
     const projectBtn = $('#view-by-project', this._element);
-    const dateBtn = $('#view-by-date', this._element);
+    const reporterBtn = $('#view-by-reporter', this._element);
+    const priorityBtn = $('#view-by-priority', this._element);
+    const mergedBtn = $('#view-by-merged', this._element);
     const viewMode = State.viewMode;
 
     projectBtn?.classList.toggle('active', viewMode === 'project');
-    dateBtn?.classList.toggle('active', viewMode === 'date');
+    reporterBtn?.classList.toggle('active', viewMode === 'reporter');
+    priorityBtn?.classList.toggle('active', viewMode === 'priority');
+    mergedBtn?.classList.toggle('active', viewMode === 'merged');
   }
 
   /**

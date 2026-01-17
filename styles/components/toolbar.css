@@ -131,3 +131,27 @@
   box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
   transform: translateY(-1px);
 }
+
+.toolbar-select {
+  padding: 6px 10px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-gray-700);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 120px;
+}
+
+.toolbar-select:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.2);
+}
+
+.toolbar-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+}

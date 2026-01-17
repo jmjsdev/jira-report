@@ -31,8 +31,8 @@ class AppState {
       search: ''
     };
 
-    // Mode d'affichage
-    this._viewMode = 'project'; // 'project' ou 'date'
+    // Mode d'affichage : 'project', 'reporter', 'priority', 'merged'
+    this._viewMode = 'project';
 
     // Fichier en cours (File System Access API)
     this._currentFileHandle = null;
@@ -129,7 +129,7 @@ class AppState {
   }
 
   setViewMode(mode) {
-    if (mode === 'project' || mode === 'date') {
+    if (['project', 'reporter', 'priority', 'merged'].includes(mode)) {
       this._viewMode = mode;
       this._notify('viewMode');
     }
@@ -287,15 +287,44 @@ class AppState {
   }
 
   /**
-   * Retourne les tâches triées par date
+   * Retourne les tâches fusionnées (non groupées)
    */
-  getTasksByDate() {
+  getTasksMerged() {
+    return this.getFilteredTasks();
+  }
+
+  /**
+   * Retourne les tâches groupées selon le mode spécifié
+   * @param {string} groupBy - 'project', 'reporter' ou 'priority'
+   */
+  getTasksGroupedBy(groupBy) {
     const filtered = this.getFilteredTasks();
-    return filtered.sort((a, b) => {
-      const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
-      const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
-      return dateA - dateB;
+    const grouped = {};
+
+    filtered.forEach(task => {
+      let groupKey;
+
+      switch (groupBy) {
+        case 'project':
+          groupKey = task.project || 'Sans projet';
+          break;
+        case 'reporter':
+          groupKey = task.reporter || 'Sans rapporteur';
+          break;
+        case 'priority':
+          groupKey = task.priorityText || 'Sans priorité';
+          break;
+        default:
+          groupKey = 'Autres';
+      }
+
+      if (!grouped[groupKey]) {
+        grouped[groupKey] = [];
+      }
+      grouped[groupKey].push(task);
     });
+
+    return grouped;
   }
 
   /**

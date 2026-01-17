@@ -16,6 +16,7 @@ class ReportModalComponent {
     this._isOpen = false;
     this._currentMode = 'text'; // 'text' ou 'html'
     this._template = null;
+    this._selectedTasks = new Set(); // Clés des tickets sélectionnés
   }
 
   /**
@@ -68,6 +69,28 @@ class ReportModalComponent {
     // Bouton copier
     const copyBtn = $('#btn-copy-report', this._element);
     copyBtn?.addEventListener('click', () => this._copyToClipboard());
+
+    // Boutons de sélection
+    const selectAllBtn = $('#report-select-all', this._element);
+    selectAllBtn?.addEventListener('click', () => this._selectAllTasks());
+
+    const deselectAllBtn = $('#report-deselect-all', this._element);
+    deselectAllBtn?.addEventListener('click', () => this._deselectAllTasks());
+
+    // Délégation pour les checkboxes de tickets
+    const tasksList = $('#report-tasks-list', this._element);
+    tasksList?.addEventListener('change', (e) => {
+      if (e.target.classList.contains('report-task-checkbox')) {
+        const taskKey = e.target.dataset.key;
+        if (e.target.checked) {
+          this._selectedTasks.add(taskKey);
+        } else {
+          this._selectedTasks.delete(taskKey);
+        }
+        this._updateSelectedCount();
+        this._refreshReport();
+      }
+    });
   }
 
   /**
@@ -75,6 +98,7 @@ class ReportModalComponent {
    */
   openText() {
     this._currentMode = 'text';
+    this._initializeTasksList();
     this._openModal();
 
     const textArea = $('#report-text-content', this._element);
@@ -94,6 +118,7 @@ class ReportModalComponent {
    */
   openHtml() {
     this._currentMode = 'html';
+    this._initializeTasksList();
     this._openModal();
 
     const textArea = $('#report-text-content', this._element);
@@ -146,6 +171,76 @@ class ReportModalComponent {
   }
 
   /**
+   * Initialise la liste des tickets avec tous sélectionnés par défaut
+   */
+  _initializeTasksList() {
+    const tasks = State.getFilteredTasks();
+    this._selectedTasks.clear();
+    tasks.forEach(task => this._selectedTasks.add(task.key));
+    this._renderTasksList();
+    this._updateSelectedCount();
+  }
+
+  /**
+   * Rend la liste des tickets avec checkboxes
+   */
+  _renderTasksList() {
+    const tasks = State.getFilteredTasks();
+    const tasksList = $('#report-tasks-list', this._element);
+    if (!tasksList) return;
+
+    let html = '<div class="report-tasks-grid">';
+    tasks.forEach(task => {
+      const isChecked = this._selectedTasks.has(task.key);
+      html += `
+        <label class="report-task-item">
+          <input type="checkbox"
+                 class="report-task-checkbox"
+                 data-key="${escapeAttr(task.key)}"
+                 ${isChecked ? 'checked' : ''}>
+          <span class="report-task-key">${escapeAttr(task.key)}</span>
+          <span class="report-task-title">${escapeAttr(task.summary || '')}</span>
+        </label>
+      `;
+    });
+    html += '</div>';
+
+    setHtml(tasksList, html);
+  }
+
+  /**
+   * Sélectionne tous les tickets
+   */
+  _selectAllTasks() {
+    const tasks = State.getFilteredTasks();
+    this._selectedTasks.clear();
+    tasks.forEach(task => this._selectedTasks.add(task.key));
+    this._renderTasksList();
+    this._updateSelectedCount();
+    this._refreshReport();
+  }
+
+  /**
+   * Désélectionne tous les tickets
+   */
+  _deselectAllTasks() {
+    this._selectedTasks.clear();
+    this._renderTasksList();
+    this._updateSelectedCount();
+    this._refreshReport();
+  }
+
+  /**
+   * Met à jour le compteur de tickets sélectionnés
+   */
+  _updateSelectedCount() {
+    const countEl = $('#report-selected-count', this._element);
+    if (countEl) {
+      countEl.textContent = this._selectedTasks.size;
+    }
+  }
+
+  /**
    * Récupère les options de colonnes
    */
   _getColumnOptions() {
@@ -163,7 +258,8 @@ class ReportModalComponent {
    */
   _generateTextReport() {
     const options = this._getColumnOptions();
-    const tasks = State.getFilteredTasks();
+    const filteredTasks = State.getFilteredTasks();
+    const tasks = filteredTasks.filter(task => this._selectedTasks.has(task.key));
 
     // Largeurs des colonnes
     const COL_ECHEANCE = 12;
@@ -251,7 +347,8 @@ class ReportModalComponent {
    */
   _generateHtmlReport() {
     const options = this._getColumnOptions();
-    const tasks = State.getFilteredTasks();
+    const filteredTasks = State.getFilteredTasks();
+    const tasks = filteredTasks.filter(task => this._selectedTasks.has(task.key));
 
     // Séparer et trier les tâches
     const doneTasks = tasks.filter(t => t.statusKey === 'done' || (t.labels || []).some(l => l.toLowerCase() === 'done'));
