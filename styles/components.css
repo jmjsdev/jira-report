@@ -732,7 +732,7 @@
 
 /* Colonne select */
 .tasks-table th.col-select {
-  width: 30px;
+  width: 40px;
   text-align: center;
   cursor: default;
 }
@@ -743,17 +743,63 @@
 
 .tasks-table td.task-select {
   text-align: center;
-  padding-left: 6px;
-  padding-right: 6px;
+  padding: 10px;
 }
 
+/* Checkbox custom avec zone cliquable élargie */
 .task-checkbox,
 .select-all-checkbox {
-  width: 16px;
-  height: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
   cursor: pointer;
-  padding: 4px;
-  margin: -4px;
-  box-sizing: content-box;
+  position: relative;
+  background: transparent;
+  border: none;
+  margin: 0;
+}
+
+/* Zone visuelle de la checkbox */
+.task-checkbox::before,
+.select-all-checkbox::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-gray-400);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  transition: all var(--transition-fast);
+}
+
+/* Hover sur la checkbox */
+.task-checkbox:hover::before,
+.select-all-checkbox:hover::before {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+/* Checkbox cochée - icône check */
+.task-checkbox:checked::before,
+.select-all-checkbox:checked::before {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.task-checkbox:checked::after,
+.select-all-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
 }
 
