@@ -17,16 +17,25 @@
       <input type="text" id="edit-task-summary" class="edit-input" placeholder="Titre du ticket...">
     </div>
 
-    <!-- Projet, Statut et Rapporteur -->
+    <!-- Projet, Statut, Priorité et Rapporteur -->
     <div class="edit-section edit-section-row">
       <div class="edit-field">
         <label for="edit-task-project">Projet</label>
-        <input type="text" id="edit-task-project" class="edit-input" list="project-list" placeholder="Projet...">
-        <datalist id="project-list"></datalist>
+        <select id="edit-task-project" class="edit-input"></select>
       </div>
       <div class="edit-field">
         <label for="edit-task-status">Statut</label>
         <select id="edit-task-status" class="edit-input"></select>
+      </div>
+      <div class="edit-field">
+        <label for="edit-task-priority">Priorité</label>
+        <select id="edit-task-priority" class="edit-input">
+          <option value="Highest">🔴 Critique</option>
+          <option value="High">🟠 Haute</option>
+          <option value="Medium" selected>🟡 Moyenne</option>
+          <option value="Low">🟢 Basse</option>
+          <option value="Lowest">⚪ Minimale</option>
+        </select>
       </div>
       <div class="edit-field">
         <label for="edit-task-reporter">Rapporteur</label>

@@ -181,9 +181,10 @@ class EditTaskModalComponent {
     $('#edit-task-summary', this._element).value = task.summary || '';
 
     // Projet
-    const projectInput = $('#edit-task-project', this._element);
-    projectInput.value = task.project || '';
-    this._populateProjectList();
+    this._populateProjectSelect(task.project || '');
+
+    // Priorité
+    this._populatePrioritySelect(task.priority || 'Medium');
 
     // Rapporteur
     this._populateReporterSelect(task.reporter || '');
@@ -221,13 +222,50 @@ class EditTaskModalComponent {
   }
 
   /**
-   * Remplit la liste des projets disponibles
+   * Remplit le select des projets (depuis UserConfig.projectRules)
    */
-  _populateProjectList() {
-    const datalist = $('#project-list', this._element);
-    const projects = State.projects;
+  _populateProjectSelect(currentProject) {
+    const select = $('#edit-task-project', this._element);
+    const projectRules = UserConfig.projectRules;
+    const currentLower = (currentProject || '').toLowerCase();
 
-    setHtml(datalist, projects.map(p => `<option value="${escapeAttr(p)}">`).join(''));
+    let html = '<option value="">-- Aucun --</option>';
+
+    // Ajouter les projets de la config, triés par nom
+    const sortedProjects = [...projectRules].sort((a, b) => a.name.localeCompare(b.name));
+    sortedProjects.forEach(rule => {
+      const selected = rule.name.toLowerCase() === currentLower ? 'selected' : '';
+      html += `<option value="${escapeAttr(rule.name)}" ${selected}>${escapeAttr(rule.name)}</option>`;
+    });
+
+    // Si le projet actuel n'est pas dans la liste, l'ajouter
+    if (currentProject && !sortedProjects.some(r => r.name.toLowerCase() === currentLower)) {
+      html += `<option value="${escapeAttr(currentProject)}" selected>${escapeAttr(currentProject)}</option>`;
+    }
+
+    setHtml(select, html);
+  }
+
+  /**
+   * Remplit le select des priorités
+   */
+  _populatePrioritySelect(currentPriority) {
+    const select = $('#edit-task-priority', this._element);
+    const priorities = [
+      { value: 'Highest', label: '🔴 Critique' },
+      { value: 'High', label: '🟠 Haute' },
+      { value: 'Medium', label: '🟡 Moyenne' },
+      { value: 'Low', label: '🟢 Basse' },
+      { value: 'Lowest', label: '⚪ Minimale' }
+    ];
+
+    let html = '';
+    priorities.forEach(p => {
+      const selected = p.value === currentPriority ? 'selected' : '';
+      html += `<option value="${p.value}" ${selected}>${p.label}</option>`;
+    });
+
+    setHtml(select, html);
   }
 
   /**
@@ -418,8 +456,8 @@ class EditTaskModalComponent {
     // Récupérer le titre
     const summary = $('#edit-task-summary', this._element).value.trim();
 
-    // Récupérer le projet
-    const project = $('#edit-task-project', this._element).value.trim();
+    // Récupérer le projet (depuis le select)
+    const project = $('#edit-task-project', this._element).value;
 
     // Récupérer le rapporteur
     const reporterSelect = $('#edit-task-reporter-select', this._element);
@@ -434,6 +472,17 @@ class EditTaskModalComponent {
       k => k.toLowerCase() === status.toLowerCase()
     );
     const statusInfo = statusMapKey ? Config.statusMap[statusMapKey] : Config.defaultStatus;
+
+    // Récupérer la priorité
+    const priority = $('#edit-task-priority', this._element).value;
+    const priorityMap = {
+      'Highest': { value: 5, text: 'Critique', class: 'critical' },
+      'High': { value: 4, text: 'Haute', class: 'high' },
+      'Medium': { value: 3, text: 'Moyenne', class: 'medium' },
+      'Low': { value: 2, text: 'Basse', class: 'low' },
+      'Lowest': { value: 1, text: 'Minimale', class: 'lowest' }
+    };
+    const priorityInfo = priorityMap[priority] || priorityMap['Medium'];
 
     // Récupérer les labels depuis le DOM
     const labels = this._getCurrentLabelsFromDom();
@@ -452,6 +501,10 @@ class EditTaskModalComponent {
       statusLabel: statusInfo.label,
       statusIcon: statusInfo.icon,
       statusCssClass: statusInfo.cssClass,
+      priority,
+      priorityValue: priorityInfo.value,
+      priorityText: priorityInfo.text,
+      priorityCssClass: priorityInfo.class,
       labels,
       dueDate: dueDate ? new Date(dueDate).toISOString() : null
     });
