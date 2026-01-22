@@ -74,17 +74,25 @@ class SidebarComponent {
 
       <!-- Options -->
       <div class="filter-group" data-filter-type="options">
-        <h3>Options</h3>
+        <h3>Tâches terminées</h3>
         <div class="task-labels">
-          <button class="filter-btn ${State.filters.showDone ? 'active' : ''}" data-filter="show-done">
-            ${State.filters.showDone ? 'Masquer' : 'Afficher'} terminées <span class="tag-count">${doneCount}</span>
+          <button class="filter-btn ${State.filters.doneFilter === 'all' ? 'active' : ''}" data-filter="done-all">
+            Toutes
           </button>
-          ${doneLabelsCount > 0 ? `
-            <button class="filter-btn ${State.filters.showLabelDone ? 'active' : ''}" data-filter="label-done">
-              ${State.filters.showLabelDone ? 'Masquer' : 'Afficher'} label done <span class="tag-count">${doneLabelsCount}</span>
-            </button>
-          ` : ''}
+          <button class="filter-btn ${State.filters.doneFilter === 'inprogress' ? 'active' : ''}" data-filter="done-inprogress">
+            En cours <span class="tag-count">${totalTasks - doneCount}</span>
+          </button>
+          <button class="filter-btn ${State.filters.doneFilter === 'done' ? 'active' : ''}" data-filter="done-only">
+            Terminées <span class="tag-count">${doneCount}</span>
+          </button>
         </div>
+        ${doneLabelsCount > 0 ? `
+        <div class="task-labels" style="margin-top: 0.5rem;">
+          <button class="filter-btn ${State.filters.showLabelDone ? 'active' : ''}" data-filter="label-done">
+            ${State.filters.showLabelDone ? 'Masquer' : 'Afficher'} label done <span class="tag-count">${doneLabelsCount}</span>
+          </button>
+        </div>
+        ` : ''}
       </div>
 
       <!-- Projets -->
@@ -299,13 +307,15 @@ class SidebarComponent {
   }
 
   /**
-   * Gère les options (showDone, showLabelDone)
+   * Gère les options (doneFilter, showLabelDone)
    */
   _handleOptionsFilter(btn, filterValue) {
-    if (filterValue === 'show-done') {
-      const newValue = !State.filters.showDone;
-      State.setFilter('showDone', newValue);
-      btn.classList.toggle('active', newValue);
+    if (filterValue === 'done-all') {
+      State.setFilter('doneFilter', 'all');
+    } else if (filterValue === 'done-inprogress') {
+      State.setFilter('doneFilter', 'inprogress');
+    } else if (filterValue === 'done-only') {
+      State.setFilter('doneFilter', 'done');
     } else if (filterValue === 'label-done') {
       const newValue = !State.filters.showLabelDone;
       State.setFilter('showLabelDone', newValue);

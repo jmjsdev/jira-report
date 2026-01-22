@@ -26,7 +26,7 @@ class AppState {
       person: null,
       tag: null,
       status: null,
-      showDone: true,
+      doneFilter: 'all', // 'all', 'done', 'inprogress'
       showLabelDone: true,
       search: ''
     };
@@ -156,7 +156,7 @@ class AppState {
       person: null,
       tag: null,
       status: null,
-      showDone: true,
+      doneFilter: 'all', // 'all', 'done', 'inprogress'
       showLabelDone: true,
       search: ''
     };
@@ -245,7 +245,10 @@ class AppState {
       }
 
       // Filtre terminé (task.done = marqué manuellement comme terminé)
-      if (!this._filters.showDone && task.done === true) {
+      if (this._filters.doneFilter === 'done' && task.done !== true) {
+        return false;
+      }
+      if (this._filters.doneFilter === 'inprogress' && task.done === true) {
         return false;
       }
 
