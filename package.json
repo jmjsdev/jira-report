@@ -1,6 +1,6 @@
 {
   "name": "jira-report",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "Application de suivi de tickets JIRA - Pure HTML/JS",
   "scripts": {
     "build": "npm run build:js && npm run build:css && npm run version:inject",
