@@ -1304,6 +1304,12 @@
   box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
 }
 
+.edit-textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
 #edit-task-duedate {
   width: 200px;
 }

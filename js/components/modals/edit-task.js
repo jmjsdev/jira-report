@@ -207,6 +207,9 @@ class EditTaskModalComponent {
     // Labels suggérés
     this._renderSuggestedLabels(task.labels || []);
 
+    // Commentaire
+    $('#edit-task-comment', this._element).value = task.comment || '';
+
     // Ouvrir
     addClass(this._element, 'show');
     this._isOpen = true;
@@ -491,6 +494,9 @@ class EditTaskModalComponent {
     const dueDateInput = $('#edit-task-duedate', this._element);
     const dueDate = dueDateInput.value || null;
 
+    // Récupérer le commentaire
+    const comment = $('#edit-task-comment', this._element).value.trim();
+
     // Mettre à jour le state avec toutes les modifications
     State.updateTask(this._currentTaskKey, {
       summary,
@@ -506,7 +512,8 @@ class EditTaskModalComponent {
       priorityText: priorityInfo.text,
       priorityCssClass: priorityInfo.class,
       labels,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : null
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      comment: comment || null
     });
 
     this.close();
