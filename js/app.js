@@ -197,22 +197,26 @@ class JiraReportApp {
    * Attache le drag & drop global pour les fichiers XML
    */
   _attachGlobalDragDrop() {
+    // Vérifie si le drag contient des fichiers externes
+    const isFileDrag = (e) => {
+      return e.dataTransfer?.types?.includes('Files');
+    };
+
     // Empêcher le comportement par défaut du navigateur
     document.addEventListener('dragover', (e) => {
       e.preventDefault();
-      e.stopPropagation();
     });
 
     document.addEventListener('dragenter', (e) => {
       e.preventDefault();
-      e.stopPropagation();
-      // Ajouter un indicateur visuel
-      document.body.classList.add('drag-over');
+      // Ajouter un indicateur visuel seulement pour les fichiers externes
+      if (isFileDrag(e)) {
+        document.body.classList.add('drag-over');
+      }
     });
 
     document.addEventListener('dragleave', (e) => {
       e.preventDefault();
-      e.stopPropagation();
       // Retirer l'indicateur seulement si on quitte vraiment le document
       if (e.relatedTarget === null || !document.body.contains(e.relatedTarget)) {
         document.body.classList.remove('drag-over');
@@ -221,9 +225,9 @@ class JiraReportApp {
 
     document.addEventListener('drop', async (e) => {
       e.preventDefault();
-      e.stopPropagation();
       document.body.classList.remove('drag-over');
 
+      // Ignorer si ce n'est pas un fichier externe
       const files = e.dataTransfer?.files;
       if (!files || files.length === 0) return;
 
