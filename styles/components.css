@@ -364,7 +364,8 @@
 .tasks-table th.col-due { width: 8%; text-align: center; }
 .tasks-table th.col-labels { width: 6%; }
 .tasks-table th.col-priority { width: 7%; text-align: center; }
-.tasks-table th.col-actions { width: 10%; text-align: center; }
+.tasks-table th.col-comment { width: 12%; }
+.tasks-table th.col-actions { width: 8%; text-align: center; }
 
 .tasks-table td {
   border: 1px solid var(--color-gray-300);
@@ -439,6 +440,14 @@
 
 .task-key-link:hover {
   text-decoration: underline;
+}
+
+/* Commentaire */
+.task-comment {
+  font-size: 12px;
+  color: var(--color-gray-600);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* Actions */

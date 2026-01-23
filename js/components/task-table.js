@@ -344,6 +344,7 @@ class TaskTableComponent {
             <th class="col-due ${dueSortClass}" data-sort="due">Échéance<span class="sort-indicator"></span></th>
             <th class="col-labels">Labels</th>
             <th class="col-priority" data-sort="priority">Priorité<span class="sort-indicator"></span></th>
+            <th class="col-comment" data-sort="comment">Commentaire<span class="sort-indicator"></span></th>
             <th class="col-actions">Actions</th>
           </tr>
         </thead>
@@ -428,7 +429,8 @@ class TaskTableComponent {
           data-priority="${task.priorityCssClass || ''}"
           data-person="${escapeAttr(task.reporter || '')}"
           data-project="${escapeAttr(task.project || '')}"
-          data-status="${statusKey}">
+          data-status="${statusKey}"
+          data-comment="${escapeAttr(task.comment || '')}">
         <td class="task-select">
           <input type="checkbox" class="task-checkbox" data-key="${escapeAttr(taskKey)}" ${this._selectedKeys.has(taskKey) ? 'checked' : ''}>
         </td>
@@ -449,6 +451,7 @@ class TaskTableComponent {
         <td class="task-due ${dueClass}">${dueDate}</td>
         <td><div class="task-labels">${labels}</div></td>
         <td class="priority ${priorityCss}">${priorityText}</td>
+        <td class="task-comment">${escapeAttr(task.comment || '')}</td>
         <td class="task-actions">
           <button class="action-btn action-done ${task.done ? 'is-done' : ''}" data-action="done" data-key="${escapeAttr(taskKey)}" title="${task.done ? 'Marquer non terminé' : 'Marquer terminé'}">${task.done ? undoIcon : checkIcon}</button>
           <button class="action-btn action-edit" data-action="edit" data-key="${escapeAttr(taskKey)}" title="Modifier">${editIcon}</button>
@@ -674,6 +677,10 @@ class TaskTableComponent {
         case 'project':
           valA = a.dataset.project || '';
           valB = b.dataset.project || '';
+          break;
+        case 'comment':
+          valA = a.dataset.comment || '';
+          valB = b.dataset.comment || '';
           break;
         default:
           valA = '';
