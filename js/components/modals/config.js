@@ -297,9 +297,12 @@ class ConfigModalComponent {
       return;
     }
 
-    setHtml(container, rules.map(rule => `
-      <div class="config-item config-item-project">
+    setHtml(container, `
+      <p class="config-hint-order">${icon('info')} L'ordre détermine la priorité de matching. Glissez pour réordonner.</p>
+      ${rules.map((rule, index) => `
+      <div class="config-item config-item-project" draggable="true" data-project-index="${index}" data-project-name="${escapeAttr(rule.name)}">
         <div class="config-project-header">
+          <span class="config-drag-handle" title="Glisser pour réordonner">${icon('menu')}</span>
           <span class="config-item-label">${icon('folder')}</span>
           <input type="text" class="config-project-name-input" value="${escapeAttr(rule.name)}" data-original="${escapeAttr(rule.name)}">
           <button class="config-item-remove" data-action="remove-project" data-value="${escapeAttr(rule.name)}">${icon('x')}</button>
@@ -316,7 +319,59 @@ class ConfigModalComponent {
           </div>
         </div>
       </div>
-    `).join(''));
+    `).join('')}
+    `);
+
+    // Attacher les listeners de drag & drop
+    this._attachDragDropListeners(container);
+  }
+
+  /**
+   * Attache les listeners de drag & drop pour les projets
+   */
+  _attachDragDropListeners(container) {
+    const items = container.querySelectorAll('.config-item-project[draggable]');
+    let draggedItem = null;
+
+    items.forEach(item => {
+      item.addEventListener('dragstart', (e) => {
+        draggedItem = item;
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.dataset.projectIndex);
+      });
+
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        draggedItem = null;
+        container.querySelectorAll('.config-item-project').forEach(i => {
+          i.classList.remove('drag-over');
+        });
+      });
+
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (draggedItem && draggedItem !== item) {
+          item.classList.add('drag-over');
+        }
+      });
+
+      item.addEventListener('dragleave', () => {
+        item.classList.remove('drag-over');
+      });
+
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        item.classList.remove('drag-over');
+
+        if (draggedItem && draggedItem !== item) {
+          const fromIndex = parseInt(draggedItem.dataset.projectIndex, 10);
+          const toIndex = parseInt(item.dataset.projectIndex, 10);
+          UserConfig.reorderProjectRules(fromIndex, toIndex);
+        }
+      });
+    });
   }
 
   /**

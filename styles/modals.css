@@ -1029,6 +1029,49 @@
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
+  cursor: grab;
+  transition: all var(--transition-normal);
+}
+
+.config-item-project:active {
+  cursor: grabbing;
+}
+
+.config-item-project.dragging {
+  opacity: 0.5;
+  background: var(--color-gray-200);
+}
+
+.config-item-project.drag-over {
+  border-color: var(--color-primary);
+  border-style: dashed;
+  background: var(--color-primary-light);
+}
+
+.config-drag-handle {
+  cursor: grab;
+  color: var(--color-gray-400);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-normal);
+}
+
+.config-drag-handle:hover {
+  color: var(--color-gray-600);
+}
+
+.config-drag-handle:active {
+  cursor: grabbing;
+}
+
+.config-hint-order {
+  font-size: 12px;
+  color: var(--color-gray-500);
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .config-project-header {

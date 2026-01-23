@@ -185,24 +185,37 @@ class UserConfigService {
   }
 
   /**
+   * Réordonne les règles de projet (drag & drop)
+   * @param {number} fromIndex - Index de départ
+   * @param {number} toIndex - Index d'arrivée
+   */
+  reorderProjectRules(fromIndex, toIndex) {
+    const config = { ...this._getConfig() };
+    const rules = [...config.projectRules];
+
+    if (fromIndex < 0 || fromIndex >= rules.length || toIndex < 0 || toIndex >= rules.length) {
+      return false;
+    }
+
+    // Retirer l'élément de sa position actuelle
+    const [movedRule] = rules.splice(fromIndex, 1);
+    // L'insérer à la nouvelle position
+    rules.splice(toIndex, 0, movedRule);
+
+    config.projectRules = rules;
+    this._setConfig(config);
+    return true;
+  }
+
+  /**
    * Détecte le projet d'un ticket basé sur son titre
-   * Priorité: texte entre crochets [] > reste du titre
-   * Les patterns sont triés par longueur décroissante pour matcher les plus spécifiques d'abord
+   * Priorité: ordre des règles dans la config (les premières sont prioritaires)
+   * Pour chaque règle, on vérifie d'abord les crochets, puis le titre complet
    */
   detectProjectFromTitle(title) {
     if (!title) return null;
     const titleLower = title.toLowerCase();
     const rules = this._getConfig().projectRules || [];
-
-    // Construire une liste de tous les patterns avec leur projet associé
-    // Triés par longueur décroissante (les plus longs/spécifiques d'abord)
-    const allPatterns = [];
-    for (const rule of rules) {
-      for (const pattern of rule.patterns) {
-        allPatterns.push({ pattern, projectName: rule.name });
-      }
-    }
-    allPatterns.sort((a, b) => b.pattern.length - a.pattern.length);
 
     // Extraire le texte entre crochets
     const bracketMatches = title.match(/\[([^\]]+)\]/g);
@@ -210,19 +223,25 @@ class UserConfigService {
       ? bracketMatches.map(m => m.slice(1, -1).toLowerCase())
       : [];
 
-    // 1. Priorité aux correspondances dans les crochets (patterns les plus longs d'abord)
-    for (const { pattern, projectName } of allPatterns) {
-      for (const bracketText of bracketTexts) {
-        if (bracketText.includes(pattern) || pattern.includes(bracketText)) {
-          return projectName;
+    // Parcourir les règles dans l'ordre (les premières sont prioritaires)
+    for (const rule of rules) {
+      // Trier les patterns de cette règle par longueur décroissante
+      const sortedPatterns = [...rule.patterns].sort((a, b) => b.length - a.length);
+
+      // 1. D'abord chercher dans les crochets
+      for (const pattern of sortedPatterns) {
+        for (const bracketText of bracketTexts) {
+          if (bracketText.includes(pattern) || pattern.includes(bracketText)) {
+            return rule.name;
+          }
         }
       }
-    }
 
-    // 2. Sinon, chercher dans le titre complet (patterns les plus longs d'abord)
-    for (const { pattern, projectName } of allPatterns) {
-      if (titleLower.includes(pattern)) {
-        return projectName;
+      // 2. Sinon chercher dans le titre complet
+      for (const pattern of sortedPatterns) {
+        if (titleLower.includes(pattern)) {
+          return rule.name;
+        }
       }
     }
 
