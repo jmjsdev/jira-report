@@ -401,24 +401,44 @@ class SidebarComponent {
   _subscribeToState() {
     // Re-render quand les tâches changent
     const unsubTasks = State.subscribe('tasks', () => {
-      this.render();
-      this._attachButtonListeners();
+      this._rerenderPreservingFocus();
     });
     this._unsubscribers.push(unsubTasks);
 
     // Re-render quand la config utilisateur change (projets, blacklist, etc.)
     const unsubConfig = State.subscribe('userConfig', () => {
-      this.render();
-      this._attachButtonListeners();
+      this._rerenderPreservingFocus();
     });
     this._unsubscribers.push(unsubConfig);
 
     // Re-render quand les filtres changent (pour mettre à jour le texte des boutons)
     const unsubFilters = State.subscribe('filters', () => {
-      this.render();
-      this._attachButtonListeners();
+      this._rerenderPreservingFocus();
     });
     this._unsubscribers.push(unsubFilters);
+  }
+
+  /**
+   * Re-render en préservant le focus du champ de recherche
+   */
+  _rerenderPreservingFocus() {
+    const searchInput = $('#search-input', this._element);
+    const hadFocus = searchInput && document.activeElement === searchInput;
+    const selectionStart = searchInput?.selectionStart;
+    const selectionEnd = searchInput?.selectionEnd;
+
+    this.render();
+    this._attachButtonListeners();
+
+    if (hadFocus) {
+      const newSearchInput = $('#search-input', this._element);
+      if (newSearchInput) {
+        newSearchInput.focus();
+        if (selectionStart !== undefined && selectionEnd !== undefined) {
+          newSearchInput.setSelectionRange(selectionStart, selectionEnd);
+        }
+      }
+    }
   }
 
   /**
